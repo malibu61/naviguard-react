@@ -1,0 +1,117 @@
+.waypoint-list-container {
+  margin: 16px 0;
+}
+
+.waypoint-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #cbd5e0;
+}
+
+.waypoint-title {
+  color: #e2e8f0 !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+
+.empty-state {
+  padding: 32px 16px;
+  text-align: center;
+  background: rgba(45, 55, 72, 0.3);
+  border-radius: 8px;
+  border: 2px dashed #4a5568;
+}
+
+.empty-text {
+  color: #a0aec0 !important;
+  font-style: italic;
+}
+
+.waypoint-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom Scrollbar for list */
+.waypoint-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.waypoint-list::-webkit-scrollbar-track {
+  background: #2d3748;
+  border-radius: 3px;
+}
+
+.waypoint-list::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 3px;
+}
+
+.waypoint-list .ant-list-item {
+  padding: 12px !important;
+  background: rgba(45, 55, 72, 0.5) !important;
+  border-radius: 8px !important;
+  border: 1px solid #4a5568 !important;
+  margin-bottom: 8px !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.waypoint-list .ant-list-item:hover {
+  background: rgba(45, 55, 72, 0.8) !important;
+  border-color: #60a5fa !important;
+  transform: translateX(4px);
+}
+
+.waypoint-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.waypoint-tag {
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+}
+
+.waypoint-coords {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.coord-text {
+  color: #cbd5e0 !important;
+  font-size: 12px !important;
+  font-family: 'Courier New', monospace;
+}
+
+.remove-btn {
+  background: transparent;
+  border: none;
+  color: #718096;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.remove-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.remove-btn:active {
+  transform: scale(0.95);
+}
