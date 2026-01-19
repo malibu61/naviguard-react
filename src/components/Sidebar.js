@@ -1,6 +1,7 @@
 import React from 'react';
-import { Input, Button, Divider, Typography, Statistic } from 'antd';
-import { Ship, Navigation, Activity } from 'lucide-react';
+import { Input, Button, Divider, Typography, Statistic, DatePicker, Tag } from 'antd';
+import { Ship, Activity, Clock } from 'lucide-react';
+import dayjs from 'dayjs';
 import WaypointList from './WaypointList';
 import './Sidebar.css';
 
@@ -8,13 +9,16 @@ const { Title, Text } = Typography;
 
 const Sidebar = ({ 
   waypoints, 
-  speed, 
-  onSpeedChange, 
+  segmentSpeeds,
+  onSegmentSpeedChange,
   totalDistance,
   estimatedTime,
   onAnalyze,
   onWaypointRemove,
-  onClearAll
+  onClearAll,
+  startTime,
+  onStartTimeChange,
+  hourlyPositions
 }) => {
   const canAnalyze = waypoints.length >= 2;
 
@@ -29,20 +33,20 @@ const Sidebar = ({
 
       <Divider className="sidebar-divider" />
 
-      {/* Hız Girişi */}
+      {/* Başlangıç Saati Girişi */}
       <div className="input-section">
         <div className="input-label">
-          <Navigation size={16} />
-          <Text className="label-text">Ortalama Hız (Knots)</Text>
+          <Clock size={16} />
+          <Text className="label-text">Başlangıç Saati</Text>
         </div>
-        <Input
-          type="number"
-          value={speed}
-          onChange={(e) => onSpeedChange(e.target.value)}
-          placeholder="Örn: 12"
-          className="speed-input"
-          min={0}
-          max={50}
+        <DatePicker
+          showTime
+          format="DD.MM.YYYY HH:mm"
+          value={startTime ? dayjs(startTime) : null}
+          onChange={(date) => onStartTimeChange(date ? date.toDate() : null)}
+          placeholder="Başlangıç saatini seçin"
+          className="time-input"
+          style={{ width: '100%' }}
         />
       </div>
 
@@ -58,7 +62,7 @@ const Sidebar = ({
           className="stat-item"
         />
         
-        {speed > 0 && totalDistance > 0 && (
+        {estimatedTime > 0 && totalDistance > 0 && (
           <Statistic
             title={<span className="stat-title">Tahmini Süre</span>}
             value={estimatedTime}
@@ -71,10 +75,42 @@ const Sidebar = ({
 
       <Divider className="sidebar-divider" />
 
+      {/* Saatlik Konumlar */}
+      {startTime && hourlyPositions.length > 0 && (
+        <>
+          <div className="hourly-positions-section">
+            <div className="waypoint-header">
+              <Clock size={18} />
+              <Text className="waypoint-title">Saatlik Konumlar</Text>
+            </div>
+            <div className="hourly-positions-list">
+              {hourlyPositions.map((pos, index) => (
+                <div key={index} className="hourly-position-item">
+                  <Tag color="green" className="hour-tag">
+                    +{pos.hour}s
+                  </Tag>
+                  <div className="hourly-position-content">
+                    <Text className="hour-time">
+                      {dayjs(pos.time).format('DD.MM.YYYY HH:mm')}
+                    </Text>
+                    <Text className="hour-coords">
+                      Lat: {pos.lat.toFixed(4)}° | Lon: {pos.lng.toFixed(4)}°
+                    </Text>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Divider className="sidebar-divider" />
+        </>
+      )}
+
       {/* Waypoint Listesi */}
       <WaypointList 
         waypoints={waypoints}
         onWaypointRemove={onWaypointRemove}
+        segmentSpeeds={segmentSpeeds}
+        onSegmentSpeedChange={onSegmentSpeedChange}
       />
 
       <Divider className="sidebar-divider" />

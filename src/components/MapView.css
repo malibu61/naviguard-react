@@ -8,22 +8,17 @@
   width: 40px;
   height: 40px;
   border-radius: 50% 50% 50% 0;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   position: absolute;
   transform: rotate(-45deg);
   left: 50%;
   top: 50%;
   margin: -20px 0 0 -20px;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
   border: 3px solid white;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* Animasyon sadece yeni eklenen marker için */
-.newly-added .marker-pin {
-  animation: markerBounce 0.3s ease-out;
 }
 
 .marker-pin::after {
@@ -62,23 +57,6 @@
   opacity: 0.5;
 }
 
-@keyframes markerBounce {
-  0% {
-    transform: rotate(-45deg) scale(0.7);
-    opacity: 0;
-  }
-  100% {
-    transform: rotate(-45deg) scale(1);
-    opacity: 1;
-  }
-}
-
-/* Hover effect */
-.custom-marker-icon:hover .marker-pin {
-  transform: rotate(-45deg) scale(1.1);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
-  transition: all 0.3s ease;
-}
 
 /* Midpoint Marker (+ button) Styles */
 .midpoint-marker-icon {
@@ -97,18 +75,7 @@
   justify-content: center;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
   border: 2px solid white;
-  transition: all 0.3s ease;
   color: white;
-}
-
-.midpoint-button:hover {
-  transform: scale(1.3) rotate(90deg);
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.6);
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-}
-
-.midpoint-button:active {
-  transform: scale(1.2) rotate(90deg);
 }
 
 .midpoint-marker-icon .leaflet-popup-tip-container {
@@ -202,7 +169,6 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
   width: 100%;
   text-align: left;
 }
@@ -210,7 +176,6 @@
 .context-menu-btn:hover {
   background: rgba(59, 130, 246, 0.2);
   border-color: #60a5fa;
-  transform: translateX(4px);
 }
 
 .context-menu-btn svg {
@@ -254,19 +219,9 @@
 }
 
 .context-menu-hint.active {
-  animation: pulse 2s ease-in-out infinite;
   background: rgba(251, 191, 36, 0.1);
   border-color: rgba(251, 191, 36, 0.3);
   color: #fbbf24;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
 }
 
 /* Dragging state marker style */
@@ -274,9 +229,6 @@
   cursor: move !important;
 }
 
-.leaflet-dragging .leaflet-marker-icon {
-  transition: none !important;
-}
 
 /* Popup close button styling */
 .waypoint-context-menu .leaflet-popup-close-button {
@@ -285,7 +237,6 @@
   padding: 4px 8px !important;
   width: auto !important;
   height: auto !important;
-  transition: all 0.2s ease;
 }
 
 .waypoint-context-menu .leaflet-popup-close-button:hover {
@@ -299,4 +250,285 @@
   border: 1px solid #4a5568;
   border-top: none;
   border-right: none;
+}
+
+/* Hourly Position Marker Styles */
+.hourly-position-icon {
+  background: transparent;
+  border: none;
+}
+
+.hourly-marker-pin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50% 50% 50% 0;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 50%;
+  margin: -12px 0 0 -12px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hourly-marker-hour {
+  transform: rotate(45deg);
+  color: white;
+  font-weight: 700;
+  font-size: 9px;
+  z-index: 10;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hourly Position Popup Styling */
+.hourly-position-popup {
+  margin: 0;
+  padding: 0;
+}
+
+.hourly-popup-container {
+  padding: 4px;
+  min-width: 240px;
+}
+
+.hourly-popup-header {
+  padding: 12px 16px;
+  background: rgba(59, 130, 246, 0.15);
+  border-bottom: 1px solid #4a5568;
+  border-radius: 8px 8px 0 0;
+}
+
+.hourly-popup-title {
+  color: #60a5fa;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hourly-popup-content {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hourly-popup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(74, 85, 104, 0.3);
+}
+
+.hourly-popup-item:last-child {
+  border-bottom: none;
+}
+
+.hourly-popup-label {
+  color: #cbd5e0;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.hourly-popup-value {
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+}
+
+.hourly-popup-value.coord-value {
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+/* Mouse Koordinat Göstergesi */
+.leaflet-coordinate-control {
+  background: rgba(26, 32, 44, 0.95) !important;
+  border: 1px solid #4a5568 !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  color: #e2e8f0 !important;
+  font-size: 12px !important;
+  font-family: 'Courier New', monospace !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(10px) !important;
+  min-width: 150px !important;
+  z-index: 1000 !important;
+}
+
+/* Denizcilik Detayları Kontrol Butonu */
+.maritime-control-button-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+}
+
+.maritime-toggle-button {
+  height: 48px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.maritime-toggle-button.active {
+  background: #3b82f6 !important;
+  border-color: #60a5fa !important;
+  color: white !important;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4) !important;
+}
+
+.maritime-toggle-button.active:hover {
+  background: #2563eb !important;
+  border-color: #3b82f6 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5) !important;
+}
+
+.maritime-toggle-button.inactive {
+  background: #4a5568 !important;
+  border-color: #718096 !important;
+  color: #cbd5e0 !important;
+}
+
+.maritime-toggle-button.inactive:hover {
+  background: #5a6578 !important;
+  border-color: #90a3b8 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.maritime-toggle-button svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.maritime-info-button {
+  height: 48px;
+  width: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 32, 44, 0.95) !important;
+  border: 1px solid #4a5568 !important;
+  color: #60a5fa !important;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.maritime-info-button:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: #60a5fa !important;
+  color: #93c5fd !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+}
+
+.maritime-info-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.maritime-reference-button {
+  height: 48px;
+  width: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 32, 44, 0.95) !important;
+  border: 1px solid #4a5568 !important;
+  color: #60a5fa !important;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.maritime-reference-button:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: #60a5fa !important;
+  color: #93c5fd !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+}
+
+.maritime-reference-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Ant Design Popover Dark Theme Override */
+.ant-popover-inner {
+  background: #1a202c !important;
+  border: 1px solid #4a5568 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+.ant-popover-inner-content {
+  color: #e2e8f0 !important;
+}
+
+.ant-popover-title {
+  background: transparent !important;
+  border-bottom: 1px solid #4a5568 !important;
+  color: #60a5fa !important;
+  font-weight: 600 !important;
+}
+
+.ant-popover-arrow::before {
+  background: #1a202c !important;
+  border: 1px solid #4a5568 !important;
+}
+
+/* Ant Design Modal Dark Theme Override for Maritime Symbols */
+.maritime-symbols-modal .ant-modal-content {
+  background: #1a202c !important;
+  border: 1px solid #4a5568 !important;
+}
+
+.maritime-symbols-modal .ant-modal-header {
+  background: #1a202c !important;
+  border-bottom: 1px solid #4a5568 !important;
+}
+
+.maritime-symbols-modal .ant-modal-title {
+  color: #e2e8f0 !important;
+}
+
+.maritime-symbols-modal .ant-modal-close {
+  color: #cbd5e0 !important;
+}
+
+.maritime-symbols-modal .ant-modal-close:hover {
+  color: #ef4444 !important;
+}
+
+.maritime-symbols-modal .ant-modal-body {
+  background: #1a202c !important;
+  color: #e2e8f0 !important;
 }

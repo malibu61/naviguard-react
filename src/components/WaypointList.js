@@ -1,11 +1,11 @@
 import React from 'react';
-import { List, Tag, Typography } from 'antd';
+import { List, Tag, Typography, Input } from 'antd';
 import { MapPin, X } from 'lucide-react';
 import './WaypointList.css';
 
 const { Text } = Typography;
 
-const WaypointList = ({ waypoints, onWaypointRemove }) => {
+const WaypointList = ({ waypoints, onWaypointRemove, segmentSpeeds, onSegmentSpeedChange }) => {
   return (
     <div className="waypoint-list-container">
       <div className="waypoint-header">
@@ -37,6 +37,23 @@ const WaypointList = ({ waypoints, onWaypointRemove }) => {
                     Lon: {waypoint.lng.toFixed(4)}°
                   </Text>
                 </div>
+                {/* Segment hızı - sadece son waypoint değilse göster */}
+                {index < waypoints.length - 1 && (
+                  <div className="segment-speed-container">
+                    <Text className="segment-speed-label">Hız:</Text>
+                    <Input
+                      type="number"
+                      size="small"
+                      value={segmentSpeeds && segmentSpeeds[index] !== undefined ? segmentSpeeds[index] : ''}
+                      onChange={(e) => onSegmentSpeedChange && onSegmentSpeedChange(index, e.target.value)}
+                      placeholder="12"
+                      className="segment-speed-input"
+                      min={0}
+                      max={50}
+                    />
+                    <Text className="segment-speed-unit">knots</Text>
+                  </div>
+                )}
               </div>
               <button
                 className="remove-btn"

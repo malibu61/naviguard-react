@@ -103,6 +103,28 @@
   color: #718096;
 }
 
+.time-input {
+  background: #2d3748 !important;
+  border: 1px solid #4a5568 !important;
+  color: #e2e8f0 !important;
+  border-radius: 6px;
+  height: 40px;
+}
+
+.time-input:hover,
+.time-input:focus {
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.1) !important;
+}
+
+.time-input .ant-picker-input > input {
+  color: #e2e8f0 !important;
+}
+
+.time-input .ant-picker-input > input::placeholder {
+  color: #718096 !important;
+}
+
 /* Stats Section */
 .stats-section {
   display: flex;
@@ -190,6 +212,58 @@
   display: block;
   margin-top: 12px;
   font-style: italic;
+}
+
+/* Hourly Positions Section */
+.hourly-positions-section {
+  margin-bottom: 16px;
+}
+
+.hourly-positions-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+
+.hourly-position-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(45, 55, 72, 0.3);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid #4a5568;
+  transition: all 0.2s ease;
+}
+
+.hourly-position-item:hover {
+  background: rgba(45, 55, 72, 0.5);
+  border-color: #60a5fa;
+}
+
+.hour-tag {
+  flex-shrink: 0;
+  margin: 0 !important;
+}
+
+.hourly-position-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hour-time {
+  color: #60a5fa;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.hour-coords {
+  color: #cbd5e0;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
 }
 
 /* Responsive */
