@@ -163,7 +163,7 @@ function MouseMoveTracker({ onMouseMove }) {
   return null;
 }
 
-const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate, onWaypointInsert, lastAddedIndex, hourlyPositions }) => {
+const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate, onWaypointInsert, lastAddedIndex, hourlyPositions, weatherData }) => {
   const [draggingIndex, setDraggingIndex] = useState(null);
   const [mousePosition, setMousePosition] = useState(null);
   const [showMaritimeDetails, setShowMaritimeDetails] = useState(true);
@@ -583,56 +583,154 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
         })}
 
         {/* Saatlik konum marker'ları */}
-        {hourlyPositions && hourlyPositions.map((pos, index) => (
-          <Marker
-            key={`hourly-${index}`}
-            position={[pos.lat, pos.lng]}
-            icon={createHourlyPositionIcon(pos.hour)}
-          >
-            <Tooltip permanent={false} direction="top" offset={[0, -24]}>
-              <div style={{ textAlign: 'center' }}>
-                <strong>+{pos.hour} Saat</strong><br />
-                {dayjs(pos.time).format('DD.MM.YYYY HH:mm')}
-              </div>
-            </Tooltip>
-            
-            <Popup className="hourly-position-popup" closeButton={true}>
-              <div className="hourly-popup-container">
-                <div className="hourly-popup-header">
-                  <span className="hourly-popup-title">+{pos.hour} Saat Sonra</span>
+        {hourlyPositions && hourlyPositions.map((pos, index) => {
+          // Bu konum için hava durumu verisini bul (time'a göre eşleştir)
+          const posTimeStr = dayjs(pos.time).format('YYYY-MM-DDTHH:mm');
+          const weather = weatherData && weatherData.length > 0 
+            ? weatherData.find(w => {
+                // Time string'ini karşılaştır (format: "2026-01-21T00:00")
+                const weatherTimeStr = w.time ? w.time.substring(0, 16) : null;
+                return weatherTimeStr === posTimeStr;
+              })
+            : null;
+
+          return (
+            <Marker
+              key={`hourly-${index}`}
+              position={[pos.lat, pos.lng]}
+              icon={createHourlyPositionIcon(pos.hour)}
+            >
+              <Tooltip permanent={false} direction="top" offset={[0, -24]}>
+                <div style={{ textAlign: 'center' }}>
+                  <strong>+{pos.hour} Saat</strong><br />
+                  {dayjs(pos.time).format('DD.MM.YYYY HH:mm')}
                 </div>
-                <div className="hourly-popup-content">
-                  <div className="hourly-popup-item">
-                    <span className="hourly-popup-label">Tarih & Saat:</span>
-                    <span className="hourly-popup-value">
-                      {dayjs(pos.time).format('DD.MM.YYYY HH:mm')}
-                    </span>
+              </Tooltip>
+              
+              <Popup className="hourly-position-popup" closeButton={true}>
+                <div className="hourly-popup-container">
+                  <div className="hourly-popup-header">
+                    <span className="hourly-popup-title">+{pos.hour} Saat Sonra</span>
                   </div>
-                  <div className="hourly-popup-item">
-                    <span className="hourly-popup-label">Enlem (Lat):</span>
-                    <span className="hourly-popup-value coord-value">
-                      {pos.lat.toFixed(4)}°
-                    </span>
-                  </div>
-                  <div className="hourly-popup-item">
-                    <span className="hourly-popup-label">Boylam (Lon):</span>
-                    <span className="hourly-popup-value coord-value">
-                      {pos.lng.toFixed(4)}°
-                    </span>
-                  </div>
-                  {pos.distance !== undefined && (
+                  <div className="hourly-popup-content">
                     <div className="hourly-popup-item">
-                      <span className="hourly-popup-label">Mesafe:</span>
+                      <span className="hourly-popup-label">Tarih & Saat:</span>
                       <span className="hourly-popup-value">
-                        {pos.distance.toFixed(2)} NM
+                        {dayjs(pos.time).format('DD.MM.YYYY HH:mm')}
                       </span>
                     </div>
-                  )}
+                    <div className="hourly-popup-item">
+                      <span className="hourly-popup-label">Enlem (Lat):</span>
+                      <span className="hourly-popup-value coord-value">
+                        {pos.lat.toFixed(4)}°
+                      </span>
+                    </div>
+                    <div className="hourly-popup-item">
+                      <span className="hourly-popup-label">Boylam (Lon):</span>
+                      <span className="hourly-popup-value coord-value">
+                        {pos.lng.toFixed(4)}°
+                      </span>
+                    </div>
+                    {pos.distance !== undefined && (
+                      <div className="hourly-popup-item">
+                        <span className="hourly-popup-label">Mesafe:</span>
+                        <span className="hourly-popup-value">
+                          {pos.distance.toFixed(2)} NM
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Hava Durumu Bilgileri */}
+                    {weather && (
+                      <>
+                        <div style={{ 
+                          marginTop: '16px', 
+                          paddingTop: '16px', 
+                          borderTop: '2px solid rgba(59, 130, 246, 0.3)' 
+                        }}>
+                          <div style={{ 
+                            fontSize: '14px', 
+                            fontWeight: '600', 
+                            color: '#60a5fa', 
+                            marginBottom: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                            </svg>
+                            Hava Durumu
+                          </div>
+                          
+                          <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: '1fr 1fr', 
+                            gap: '10px' 
+                          }}>
+                            {weather.temperature_2m !== undefined && (
+                              <div className="hourly-popup-item">
+                                <span className="hourly-popup-label">Sıcaklık (2m):</span>
+                                <span className="hourly-popup-value" style={{ color: '#fbbf24' }}>
+                                  {weather.temperature_2m.toFixed(1)}°C
+                                </span>
+                              </div>
+                            )}
+                            
+                            {weather.windspeed_10m !== undefined && (
+                              <div className="hourly-popup-item">
+                                <span className="hourly-popup-label">Rüzgar Hızı (10m):</span>
+                                <span className="hourly-popup-value" style={{ color: '#34d399' }}>
+                                  {weather.windspeed_10m.toFixed(1)} m/s
+                                </span>
+                              </div>
+                            )}
+                            
+                            {weather.winddirection_10m !== undefined && (
+                              <div className="hourly-popup-item">
+                                <span className="hourly-popup-label">Rüzgar Yönü:</span>
+                                <span className="hourly-popup-value" style={{ color: '#34d399' }}>
+                                  {weather.winddirection_10m}°
+                                </span>
+                              </div>
+                            )}
+                            
+                            {weather.visibility !== undefined && (
+                              <div className="hourly-popup-item">
+                                <span className="hourly-popup-label">Görüş Mesafesi:</span>
+                                <span className="hourly-popup-value" style={{ color: '#93c5fd' }}>
+                                  {weather.visibility.toFixed(1)} km
+                                </span>
+                              </div>
+                            )}
+                            
+                            {weather.cloudcover !== undefined && (
+                              <div className="hourly-popup-item">
+                                <span className="hourly-popup-label">Bulut Örtüsü:</span>
+                                <span className="hourly-popup-value" style={{ color: '#a78bfa' }}>
+                                  {weather.cloudcover}%
+                                </span>
+                              </div>
+                            )}
+                            
+                            {weather.surface_Pressure !== undefined && (
+                              <div className="hourly-popup-item">
+                                <span className="hourly-popup-label">Yüzey Basıncı:</span>
+                                <span className="hourly-popup-value" style={{ color: '#fb7185' }}>
+                                  {weather.surface_Pressure.toFixed(1)} hPa
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
     </div>
   );

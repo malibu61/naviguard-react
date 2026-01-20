@@ -14,6 +14,7 @@ function App() {
   const [lastAddedIndex, setLastAddedIndex] = useState(null);
   const [startTime, setStartTime] = useState(null); // Başlangıç saati (Date object)
   const [hourlyPositions, setHourlyPositions] = useState([]); // Her saat için hesaplanan konumlar
+  const [weatherData, setWeatherData] = useState([]); // Backend'den gelen hava durumu verileri
   const [analysisModalVisible, setAnalysisModalVisible] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const DEFAULT_SPEED = 12; // Varsayılan hız: 12 knots
@@ -375,6 +376,65 @@ function App() {
 
       console.log('Backend\'den gelen sonuç:', result);
       
+      // Saatlik konumları backend'e gönder
+      console.log('startTime:', startTime);
+      console.log('hourlyPositions:', hourlyPositions);
+      console.log('hourlyPositions length:', hourlyPositions?.length);
+      
+      if (!startTime) {
+        console.warn('Başlangıç saati belirlenmediği için saatlik konumlar gönderilemiyor');
+        message.warning('Başlangıç saati belirlenmediği için hava durumu verileri alınamadı');
+      } else if (hourlyPositions && hourlyPositions.length > 0) {
+        const coordinatesData = hourlyPositions.map(pos => {
+          // time property'sini kontrol et
+          if (!pos.time) {
+            console.warn('Time property bulunamadı:', pos);
+            return null;
+          }
+          
+          // Date object ise ISO string'e çevir, değilse olduğu gibi kullan
+          const timestamp = pos.time instanceof Date 
+            ? pos.time.toISOString() 
+            : (typeof pos.time === 'string' ? pos.time : new Date(pos.time).toISOString());
+          
+          return {
+            latitude: pos.lat,
+            longitude: pos.lng,
+            timestamp: timestamp
+          };
+        }).filter(item => item !== null); // null olanları filtrele
+
+        console.log('Saatlik konumlar backend\'e gönderiliyor:', coordinatesData);
+
+        try {
+          const weatherResponse = await fetch(getApiUrl(API_ENDPOINTS.WEATHER_COORDINATES), {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(coordinatesData)
+          });
+
+          if (!weatherResponse.ok) {
+            throw new Error(`HTTP error! status: ${weatherResponse.status}`);
+          }
+
+          const weatherResult = await weatherResponse.json();
+          console.log('Backend\'den gelen hava durumu verileri:', weatherResult);
+          
+          // Hava durumu verilerini state'e kaydet
+          setWeatherData(weatherResult);
+        } catch (weatherError) {
+          console.error('Hava durumu API çağrısı hatası:', weatherError);
+          message.error({
+            content: `Hava durumu verileri alınamadı: ${weatherError.message}`,
+            duration: 5,
+          });
+        }
+      } else {
+        console.log('Gönderilecek saatlik konum bulunamadı');
+      }
+      
       return result;
     } catch (error) {
       console.error('API çağrısı hatası:', error);
@@ -383,7 +443,7 @@ function App() {
         duration: 5,
       });
     }
-  }, [waypoints, segmentSpeeds, totalDistance, estimatedTime]);
+  }, [waypoints, segmentSpeeds, totalDistance, estimatedTime, hourlyPositions]);
 
   return (
     <ConfigProvider
@@ -419,6 +479,7 @@ function App() {
             onWaypointInsert={handleWaypointInsert}
             lastAddedIndex={lastAddedIndex}
             hourlyPositions={hourlyPositions}
+            weatherData={weatherData}
           />
         </div>
       </div>

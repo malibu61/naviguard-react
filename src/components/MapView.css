@@ -353,6 +353,16 @@
   font-weight: 700;
 }
 
+/* Weather data grid styling */
+.hourly-popup-content .hourly-popup-item {
+  border-bottom: 1px solid rgba(74, 85, 104, 0.2);
+  padding: 6px 0;
+}
+
+.hourly-popup-content .hourly-popup-item:last-child {
+  border-bottom: none;
+}
+
 /* Mouse Koordinat Göstergesi */
 .leaflet-coordinate-control {
   background: rgba(26, 32, 44, 0.95) !important;
