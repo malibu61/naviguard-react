@@ -2,12 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, Tooltip, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import dayjs from 'dayjs';
-import { Button, Popover, Modal, Typography, Divider, Tag } from 'antd';
-import { MapPin, X, Info, BookOpen } from 'lucide-react';
+import utc from 'dayjs/plugin/utc';
+import { Button, Popover, Modal, Typography, Tag } from 'antd';
+import { MapPin, Info, BookOpen } from 'lucide-react';
 import { maritimeSymbols, ialaSystem } from '../data/maritimeSymbols';
 import MaritimeSymbolIcon from './MaritimeSymbolIcon';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
+
+dayjs.extend(utc);
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -585,12 +588,17 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
         {/* Saatlik konum marker'ları */}
         {hourlyPositions && hourlyPositions.map((pos, index) => {
           // Bu konum için hava durumu verisini bul (time'a göre eşleştir)
-          const posTimeStr = dayjs(pos.time).format('YYYY-MM-DDTHH:mm');
+          // pos.time Türkiye saatine göre (UTC+3), backend'den gelen time UTC formatında
+          // Backend'den gelen UTC zamanını Türkiye saatine (UTC+3) çevirip karşılaştırıyoruz
+          // Örnek: Backend UTC 00:00 → Türkiye saati 03:00 ile eşleşmeli
+          const posTimeStr = dayjs(pos.time).format('YYYY-MM-DDTHH:mm'); // Türkiye saati
           const weather = weatherData && weatherData.length > 0 
             ? weatherData.find(w => {
-                // Time string'ini karşılaştır (format: "2026-01-21T00:00")
-                const weatherTimeStr = w.time ? w.time.substring(0, 16) : null;
-                return weatherTimeStr === posTimeStr;
+                if (!w.time) return false;
+                // Backend'den gelen UTC zamanını Türkiye saatine (UTC+3) çevir
+                const weatherTimeUTC = w.time.substring(0, 16); // "2026-01-21T00:00"
+                const weatherTimeTurkey = dayjs(weatherTimeUTC).utc().add(3, 'hour').format('YYYY-MM-DDTHH:mm');
+                return weatherTimeTurkey === posTimeStr;
               })
             : null;
 
