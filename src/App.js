@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ConfigProvider, theme, message, Modal, Typography } from 'antd';
+import { ConfigProvider, theme, message, Modal, Typography, Button } from 'antd';
+import { Bot, Minimize2, Maximize2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
 import { getApiUrl, API_ENDPOINTS } from './config/api';
@@ -17,7 +19,11 @@ function App() {
   const [weatherData, setWeatherData] = useState([]); // Backend'den gelen hava durumu verileri
   const [analysisModalVisible, setAnalysisModalVisible] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [isMinimized, setIsMinimized] = useState(false); // Modal minimize durumu
+  const [isAnalyzing, setIsAnalyzing] = useState(false); // Analiz yapılıyor mu?
   const DEFAULT_SPEED = 12; // Varsayılan hız: 12 knots
+  const [defaultSpeed, setDefaultSpeed] = useState(DEFAULT_SPEED); // Varsayılan sürat değeri
+  const [useDefaultSpeed, setUseDefaultSpeed] = useState(false); // Varsayılan sürat kullanılsın mı?
 
   // Mesafe hesaplama fonksiyonu (Haversine formülü kullanarak Deniz Mili cinsinden)
   const calculateDistance = useCallback((lat1, lon1, lat2, lon2) => {
@@ -119,19 +125,17 @@ function App() {
 
   // Waypoint güncelleme (taşıma)
   const handleWaypointUpdate = useCallback((index, newPosition) => {
-    const updatedWaypoints = [...waypoints];
-    updatedWaypoints[index] = {
-      lat: newPosition.lat,
-      lng: newPosition.lng
-    };
-    setWaypoints(updatedWaypoints);
-    
-    // Mesafeyi güncelle
-    const newDistance = calculateTotalDistance(updatedWaypoints);
-    setTotalDistance(newDistance);
+    setWaypoints(prevWaypoints => {
+      const updatedWaypoints = [...prevWaypoints];
+      updatedWaypoints[index] = {
+        lat: newPosition.lat,
+        lng: newPosition.lng
+      };
+      return updatedWaypoints;
+    });
     
     message.success(`Waypoint #${index + 1} taşındı`);
-  }, [waypoints, calculateTotalDistance]);
+  }, []);
 
   // Araya waypoint ekleme
   const handleWaypointInsert = useCallback((index, position) => {
@@ -169,6 +173,8 @@ function App() {
     setWaypoints([]);
     setSegmentSpeeds([]);
     setTotalDistance(0);
+    setDefaultSpeed(DEFAULT_SPEED);
+    setUseDefaultSpeed(false);
     message.warning('Tüm waypointler temizlendi');
   }, []);
 
@@ -186,8 +192,23 @@ function App() {
     });
   }, []);
 
+  // Varsayılan sürat değişimi
+  const handleDefaultSpeedChange = useCallback((value) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= 0) {
+      setDefaultSpeed(numValue);
+    } else if (value === '') {
+      setDefaultSpeed(DEFAULT_SPEED);
+    }
+  }, []);
+
+  // Varsayılan sürat kullanımı değişimi
+  const handleUseDefaultSpeedChange = useCallback((checked) => {
+    setUseDefaultSpeed(checked);
+  }, []);
+
   // Toplam süre hesaplama (segment bazlı hızlara göre)
-  const calculateTotalTime = useCallback((points, speeds) => {
+  const calculateTotalTime = useCallback((points, speeds, useDefault, defaultSpd) => {
     if (points.length < 2) return 0;
     
     let totalTime = 0;
@@ -198,7 +219,10 @@ function App() {
         points[i + 1].lat,
         points[i + 1].lng
       );
-      const segmentSpeed = speeds[i] !== undefined ? speeds[i] : DEFAULT_SPEED;
+      // Eğer varsayılan sürat kullanılıyorsa, onu kullan; değilse segment hızını kullan
+      const segmentSpeed = useDefault 
+        ? defaultSpd 
+        : (speeds[i] !== undefined ? speeds[i] : DEFAULT_SPEED);
       if (segmentSpeed > 0) {
         totalTime += dist / segmentSpeed;
       }
@@ -207,7 +231,7 @@ function App() {
   }, [calculateDistance]);
 
   // Tahmini süre hesaplama (saat cinsinden)
-  const estimatedTime = calculateTotalTime(waypoints, segmentSpeeds);
+  const estimatedTime = calculateTotalTime(waypoints, segmentSpeeds, useDefaultSpeed, defaultSpeed);
 
   // Her 1 saat için rotadaki konumu hesapla (segment bazlı hızlara göre)
   const calculateHourlyPositions = useCallback(() => {
@@ -235,7 +259,10 @@ function App() {
         waypoints[i + 1].lat,
         waypoints[i + 1].lng
       );
-      const speed = segmentSpeeds[i] !== undefined ? segmentSpeeds[i] : DEFAULT_SPEED;
+      // Eğer varsayılan sürat kullanılıyorsa, onu kullan; değilse segment hızını kullan
+      const speed = useDefaultSpeed 
+        ? defaultSpeed 
+        : (segmentSpeeds[i] !== undefined ? segmentSpeeds[i] : DEFAULT_SPEED);
       const time = speed > 0 ? dist / speed : 0;
       
       segments.push({
@@ -309,12 +336,16 @@ function App() {
     }
 
     setHourlyPositions(positions);
-  }, [startTime, waypoints, segmentSpeeds, totalDistance, calculateDistance]);
+  }, [startTime, waypoints, segmentSpeeds, totalDistance, calculateDistance, useDefaultSpeed, defaultSpeed]);
 
-  // Başlangıç saati veya waypoint/hız değiştiğinde saatlik konumları yeniden hesapla
+  // Waypoints değiştiğinde toplam mesafeyi güncelle
   useEffect(() => {
-    calculateHourlyPositions();
-  }, [calculateHourlyPositions]);
+    const newDistance = calculateTotalDistance(waypoints);
+    setTotalDistance(newDistance);
+  }, [waypoints, calculateTotalDistance]);
+
+  // NOT: Saatlik konumları artık otomatik hesaplamıyoruz!
+  // Sadece "Analiz Et" butonuna basıldığında hesaplanacak.
 
   // Başlangıç saati değişimi
   const handleStartTimeChange = useCallback((time) => {
@@ -328,11 +359,48 @@ function App() {
       return;
     }
 
+    // Eğer zaten analiz yapılıyorsa, tekrar tıklamayı engelle
+    if (isAnalyzing) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+
+    // ✅ Saatlik konumları SADECE analiz sırasında hesapla!
+    console.log('📊 Analiz başlıyor - saatlik konumlar hesaplanıyor...');
+    calculateHourlyPositions();
+
     // Backend'e gönderilecek data
-    // segmentSpeeds'deki undefined değerleri temizle veya null yap
-    const cleanedSegmentSpeeds = segmentSpeeds.map(speed => 
-      speed !== undefined ? speed : null
-    );
+    // Eğer varsayılan sürat kullanılıyorsa, tüm segmentler için varsayılan sürat değerini gönder
+    // Değilse, her segment için kendi sürat değerini gönder (undefined ise null)
+    let cleanedSegmentSpeeds;
+    if (useDefaultSpeed) {
+      // Tüm segmentler için varsayılan sürat değerini kullan
+      cleanedSegmentSpeeds = Array(waypoints.length - 1).fill(defaultSpeed);
+    } else {
+      // Her segment için kendi sürat değerini kullan
+      cleanedSegmentSpeeds = segmentSpeeds.map(speed => 
+        speed !== undefined ? speed : null
+      );
+    }
+
+    // hourlyPositions'ı backend formatına dönüştür
+    const formattedHourlyPositions = startTime && hourlyPositions && hourlyPositions.length > 0
+      ? hourlyPositions.map(pos => {
+          // Timestamp'i ISO 8601 formatına çevir (UTC)
+          const timestamp = pos.time instanceof Date
+            ? pos.time.toISOString()
+            : (typeof pos.time === 'string' ? pos.time : new Date(pos.time).toISOString());
+
+          return {
+            latitude: pos.lat,
+            longitude: pos.lng,
+            timestamp: timestamp,
+            hour: pos.hour,
+            distance: pos.distance
+          };
+        })
+      : [];
 
     const routeData = {
       waypoints: waypoints.map(wp => ({
@@ -341,7 +409,8 @@ function App() {
       })),
       segmentSpeeds: cleanedSegmentSpeeds,
       totalDistance: totalDistance,
-      estimatedTime: estimatedTime
+      estimatedTime: estimatedTime,
+      hourlyPositions: formattedHourlyPositions
     };
 
     console.log('Analiz için backend\'e gönderilecek data:', routeData);
@@ -358,6 +427,7 @@ function App() {
       });
 
       loadingMessage();
+      setIsAnalyzing(false);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -366,8 +436,9 @@ function App() {
       const result = await response.json();
       
       // Analiz sonucunu state'e kaydet ve modal'ı aç
-      setAnalysisResult(result);
+      setAnalysisResult(result.response);
       setAnalysisModalVisible(true);
+      setIsMinimized(false); // Yeni analiz geldiğinde modal'ı açık göster
       
       message.success({
         content: `Rota analizi tamamlandı! ${waypoints.length} waypoint, ${totalDistance.toFixed(2)} NM`,
@@ -386,23 +457,21 @@ function App() {
         message.warning('Başlangıç saati belirlenmediği için hava durumu verileri alınamadı');
       } else if (hourlyPositions && hourlyPositions.length > 0) {
         const coordinatesData = hourlyPositions.map(pos => {
-          // time property'sini kontrol et
           if (!pos.time) {
             console.warn('Time property bulunamadı:', pos);
             return null;
           }
-          
-          // Date object ise ISO string'e çevir, değilse olduğu gibi kullan
-          const timestamp = pos.time instanceof Date 
-            ? pos.time.toISOString() 
+          // Timestamp her zaman UTC (ISO 8601). TR'ye çevirme.
+          const timestamp = pos.time instanceof Date
+            ? pos.time.toISOString()
             : (typeof pos.time === 'string' ? pos.time : new Date(pos.time).toISOString());
-          
+
           return {
             latitude: pos.lat,
             longitude: pos.lng,
-            timestamp: timestamp
+            timestamp
           };
-        }).filter(item => item !== null); // null olanları filtrele
+        }).filter(item => item !== null);
 
         console.log('Saatlik konumlar backend\'e gönderiliyor:', coordinatesData);
 
@@ -438,12 +507,13 @@ function App() {
       return result;
     } catch (error) {
       console.error('API çağrısı hatası:', error);
+      setIsAnalyzing(false);
       message.error({
         content: `API çağrısı başarısız: ${error.message}`,
         duration: 5,
       });
     }
-  }, [waypoints, segmentSpeeds, totalDistance, estimatedTime, hourlyPositions]);
+  }, [waypoints, segmentSpeeds, totalDistance, estimatedTime, hourlyPositions, useDefaultSpeed, defaultSpeed, isAnalyzing]);
 
   return (
     <ConfigProvider
@@ -469,6 +539,11 @@ function App() {
           startTime={startTime}
           onStartTimeChange={handleStartTimeChange}
           hourlyPositions={hourlyPositions}
+          defaultSpeed={defaultSpeed}
+          onDefaultSpeedChange={handleDefaultSpeedChange}
+          useDefaultSpeed={useDefaultSpeed}
+          onUseDefaultSpeedChange={handleUseDefaultSpeedChange}
+          isAnalyzing={isAnalyzing}
         />
         <div className="map-wrapper">
           <MapView
@@ -481,33 +556,106 @@ function App() {
             hourlyPositions={hourlyPositions}
             weatherData={weatherData}
           />
+          
+          {/* Minimize Edilmiş AI Analiz Simgesi */}
+          {isMinimized && analysisResult && (
+            <div 
+              className="ai-analysis-minimized-icon"
+              onClick={() => setIsMinimized(false)}
+              title="AI Analizini Göster"
+            >
+              <Bot size={24} />
+              <span className="ai-analysis-badge">AI</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Analiz Sonuçları Modal */}
       <Modal
-        title="Rota Analiz Sonuçları"
-        open={analysisModalVisible}
-        onCancel={() => setAnalysisModalVisible(false)}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Rota Analiz Sonuçları</span>
+            <Button
+              type="text"
+              icon={<Minimize2 size={16} />}
+              onClick={() => setIsMinimized(true)}
+              style={{ color: '#cbd5e0' }}
+              title="Küçült"
+            />
+          </div>
+        }
+        open={analysisModalVisible && !isMinimized}
+        onCancel={() => setIsMinimized(true)}
         footer={null}
         width={800}
         style={{ top: 20 }}
+        closable={false}
       >
         {analysisResult && (
-          <div style={{ marginTop: 16 }}>
-            {analysisResult.comment ? (
+          <div className="ai-analysis-content">
+            {typeof analysisResult === 'string' ? (
+              <ReactMarkdown
+                components={{
+                  h1: ({node, ...props}) => <Title level={2} style={{ color: '#60a5fa', marginTop: '24px', marginBottom: '16px' }} {...props} />,
+                  h2: ({node, ...props}) => <Title level={3} style={{ color: '#60a5fa', marginTop: '20px', marginBottom: '12px' }} {...props} />,
+                  h3: ({node, ...props}) => <Title level={4} style={{ color: '#60a5fa', marginTop: '16px', marginBottom: '10px' }} {...props} />,
+                  h4: ({node, ...props}) => <Title level={5} style={{ color: '#60a5fa', marginTop: '12px', marginBottom: '8px' }} {...props} />,
+                  p: ({node, ...props}) => <Paragraph style={{ color: '#e2e8f0', marginBottom: '12px', lineHeight: '1.8' }} {...props} />,
+                  strong: ({node, ...props}) => <strong style={{ color: '#f7fafc', fontWeight: 600 }} {...props} />,
+                  ul: ({node, ...props}) => <ul style={{ color: '#e2e8f0', marginBottom: '12px', paddingLeft: '24px' }} {...props} />,
+                  ol: ({node, ...props}) => <ol style={{ color: '#e2e8f0', marginBottom: '12px', paddingLeft: '24px' }} {...props} />,
+                  li: ({node, ...props}) => <li style={{ color: '#e2e8f0', marginBottom: '6px', lineHeight: '1.8' }} {...props} />,
+                  code: ({node, inline, ...props}) => 
+                    inline ? (
+                      <code style={{ 
+                        background: 'rgba(59, 130, 246, 0.2)', 
+                        color: '#60a5fa', 
+                        padding: '2px 6px', 
+                        borderRadius: '4px',
+                        fontFamily: 'monospace',
+                        fontSize: '0.9em'
+                      }} {...props} />
+                    ) : (
+                      <code style={{ 
+                        display: 'block',
+                        background: '#1a1a1a', 
+                        color: '#e2e8f0', 
+                        padding: '12px', 
+                        borderRadius: '8px',
+                        fontFamily: 'monospace',
+                        fontSize: '0.9em',
+                        overflow: 'auto',
+                        marginBottom: '12px'
+                      }} {...props} />
+                    ),
+                  blockquote: ({node, ...props}) => (
+                    <blockquote style={{
+                      borderLeft: '4px solid #3b82f6',
+                      paddingLeft: '16px',
+                      marginLeft: 0,
+                      marginBottom: '12px',
+                      color: '#cbd5e0',
+                      fontStyle: 'italic'
+                    }} {...props} />
+                  ),
+                }}
+              >
+                {analysisResult}
+              </ReactMarkdown>
+            ) : analysisResult.comment ? (
               <div>
                 <Title level={4}>Analiz Yorumu</Title>
-                <Paragraph 
-                  style={{ 
-                    whiteSpace: 'pre-wrap', 
-                    fontSize: '15px',
-                    lineHeight: '1.8',
-                    color: '#e2e8f0'
+                <ReactMarkdown
+                  components={{
+                    p: ({node, ...props}) => <Paragraph style={{ color: '#e2e8f0', marginBottom: '12px', lineHeight: '1.8' }} {...props} />,
+                    strong: ({node, ...props}) => <strong style={{ color: '#f7fafc', fontWeight: 600 }} {...props} />,
+                    ul: ({node, ...props}) => <ul style={{ color: '#e2e8f0', marginBottom: '12px', paddingLeft: '24px' }} {...props} />,
+                    li: ({node, ...props}) => <li style={{ color: '#e2e8f0', marginBottom: '6px', lineHeight: '1.8' }} {...props} />,
                   }}
                 >
                   {analysisResult.comment}
-                </Paragraph>
+                </ReactMarkdown>
               </div>
             ) : (
               <Paragraph>
@@ -526,7 +674,7 @@ function App() {
             )}
             
             {/* Diğer sonuç verileri varsa göster */}
-            {analysisResult.waypoints && (
+            {analysisResult && typeof analysisResult === 'object' && analysisResult.waypoints && (
               <div style={{ marginTop: 24 }}>
                 <Title level={5}>Waypoint Sayısı: {analysisResult.waypoints.length || waypoints.length}</Title>
               </div>

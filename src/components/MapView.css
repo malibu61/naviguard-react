@@ -4,6 +4,14 @@
   border: none;
 }
 
+/* İçindeki tüm elementlerin pointer eventlerini devre dışı bırak, böylece drag çalışır */
+.custom-marker-icon .marker-pin,
+.custom-marker-icon .marker-pin *,
+.custom-marker-icon .marker-shadow,
+.custom-marker-icon .marker-number {
+  pointer-events: none;
+}
+
 .marker-pin {
   width: 40px;
   height: 40px;
@@ -288,6 +296,13 @@
 }
 
 /* Hourly Position Popup Styling */
+.leaflet-popup.hourly-position-popup .leaflet-popup-content-wrapper {
+  width: 500px;
+}
+.leaflet-popup.hourly-position-popup .leaflet-popup-content {
+  width: 500px !important;
+  min-width: 500px;
+}
 .hourly-position-popup {
   margin: 0;
   padding: 0;

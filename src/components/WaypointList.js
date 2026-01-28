@@ -1,17 +1,57 @@
 import React from 'react';
-import { List, Tag, Typography, Input } from 'antd';
+import { List, Tag, Typography, Input, Checkbox } from 'antd';
 import { MapPin, X } from 'lucide-react';
 import './WaypointList.css';
 
 const { Text } = Typography;
 
-const WaypointList = ({ waypoints, onWaypointRemove, segmentSpeeds, onSegmentSpeedChange }) => {
+const WaypointList = ({ 
+  waypoints, 
+  onWaypointRemove, 
+  segmentSpeeds, 
+  onSegmentSpeedChange,
+  defaultSpeed,
+  onDefaultSpeedChange,
+  useDefaultSpeed,
+  onUseDefaultSpeedChange
+}) => {
   return (
     <div className="waypoint-list-container">
       <div className="waypoint-header">
         <MapPin size={18} />
         <Text className="waypoint-title">Waypoint Listesi</Text>
       </div>
+      
+      {/* Varsayılan Sürat Girişi */}
+      {waypoints.length > 0 && (
+        <div className="default-speed-section">
+          <div className="default-speed-control">
+            <Checkbox
+              checked={useDefaultSpeed}
+              onChange={(e) => onUseDefaultSpeedChange && onUseDefaultSpeedChange(e.target.checked)}
+              className="default-speed-checkbox"
+            >
+              <Text className="default-speed-label">Tüm aralıklar için varsayılan sürat kullan</Text>
+            </Checkbox>
+          </div>
+          {useDefaultSpeed && (
+            <div className="default-speed-input-container">
+              <Text className="default-speed-input-label">Varsayılan Sürat:</Text>
+              <Input
+                type="number"
+                size="small"
+                value={defaultSpeed !== undefined ? defaultSpeed : ''}
+                onChange={(e) => onDefaultSpeedChange && onDefaultSpeedChange(e.target.value)}
+                placeholder="12"
+                className="default-speed-input"
+                min={0}
+                max={50}
+              />
+              <Text className="default-speed-unit">knots</Text>
+            </div>
+          )}
+        </div>
+      )}
       
       {waypoints.length === 0 ? (
         <div className="empty-state">
@@ -50,6 +90,7 @@ const WaypointList = ({ waypoints, onWaypointRemove, segmentSpeeds, onSegmentSpe
                       className="segment-speed-input"
                       min={0}
                       max={50}
+                      disabled={useDefaultSpeed}
                     />
                     <Text className="segment-speed-unit">knots</Text>
                   </div>

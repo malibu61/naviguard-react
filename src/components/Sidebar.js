@@ -1,9 +1,12 @@
 import React from 'react';
-import { Input, Button, Divider, Typography, Statistic, DatePicker, Tag } from 'antd';
-import { Ship, Activity, Clock } from 'lucide-react';
+import { Input, Button, Divider, Typography, Statistic, DatePicker, Tag, Spin } from 'antd';
+import { Ship, Activity, Clock, Loader2 } from 'lucide-react';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import WaypointList from './WaypointList';
 import './Sidebar.css';
+
+dayjs.extend(utc);
 
 const { Title, Text } = Typography;
 
@@ -18,9 +21,14 @@ const Sidebar = ({
   onClearAll,
   startTime,
   onStartTimeChange,
-  hourlyPositions
+  hourlyPositions,
+  defaultSpeed,
+  onDefaultSpeedChange,
+  useDefaultSpeed,
+  onUseDefaultSpeedChange,
+  isAnalyzing
 }) => {
-  const canAnalyze = waypoints.length >= 2;
+  const canAnalyze = waypoints.length >= 2 && !isAnalyzing;
 
   return (
     <div className="sidebar">
@@ -33,18 +41,18 @@ const Sidebar = ({
 
       <Divider className="sidebar-divider" />
 
-      {/* Başlangıç Saati Girişi */}
+      {/* Başlangıç Saati Girişi — Tüm saatler UTC olarak işlenir */}
       <div className="input-section">
         <div className="input-label">
           <Clock size={16} />
-          <Text className="label-text">Başlangıç Saati</Text>
+          <Text className="label-text">Başlangıç Saati (UTC)</Text>
         </div>
         <DatePicker
           showTime
           format="DD.MM.YYYY HH:mm"
           value={startTime ? dayjs(startTime) : null}
           onChange={(date) => onStartTimeChange(date ? date.toDate() : null)}
-          placeholder="Başlangıç saatini seçin"
+          placeholder="Başlangıç saatini seçin (UTC)"
           className="time-input"
           style={{ width: '100%' }}
         />
@@ -81,7 +89,7 @@ const Sidebar = ({
           <div className="hourly-positions-section">
             <div className="waypoint-header">
               <Clock size={18} />
-              <Text className="waypoint-title">Saatlik Konumlar</Text>
+              <Text className="waypoint-title">Saatlik Konumlar (UTC)</Text>
             </div>
             <div className="hourly-positions-list">
               {hourlyPositions.map((pos, index) => (
@@ -90,8 +98,8 @@ const Sidebar = ({
                     +{pos.hour}s
                   </Tag>
                   <div className="hourly-position-content">
-                    <Text className="hour-time">
-                      {dayjs(pos.time).format('DD.MM.YYYY HH:mm')}
+                    <Text className="hour-time" title="Tüm saatler UTC">
+                      {dayjs.utc(pos.time).format('DD.MM.YYYY HH:mm')} UTC
                     </Text>
                     <Text className="hour-coords">
                       Lat: {pos.lat.toFixed(4)}° | Lon: {pos.lng.toFixed(4)}°
@@ -111,6 +119,10 @@ const Sidebar = ({
         onWaypointRemove={onWaypointRemove}
         segmentSpeeds={segmentSpeeds}
         onSegmentSpeedChange={onSegmentSpeedChange}
+        defaultSpeed={defaultSpeed}
+        onDefaultSpeedChange={onDefaultSpeedChange}
+        useDefaultSpeed={useDefaultSpeed}
+        onUseDefaultSpeedChange={onUseDefaultSpeedChange}
       />
 
       <Divider className="sidebar-divider" />
@@ -120,13 +132,14 @@ const Sidebar = ({
         <Button
           type="primary"
           size="large"
-          icon={<Activity size={18} />}
-          disabled={!canAnalyze}
+          icon={isAnalyzing ? <Loader2 size={18} className="spinning-icon" /> : <Activity size={18} />}
+          disabled={!canAnalyze || isAnalyzing}
           onClick={onAnalyze}
           className="analyze-btn"
           block
+          loading={isAnalyzing}
         >
-          Rotayı Analiz Et
+          {isAnalyzing ? 'Analiz Ediliyor...' : 'Rotayı Analiz Et'}
         </Button>
         
         {waypoints.length > 0 && (

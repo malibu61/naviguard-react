@@ -119,3 +119,150 @@ body {
 button, a, input {
   transition: all 0.2s ease;
 }
+
+/* AI Analiz İçeriği Stilleri */
+.ai-analysis-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.ai-analysis-content h1,
+.ai-analysis-content h2,
+.ai-analysis-content h3,
+.ai-analysis-content h4,
+.ai-analysis-content h5,
+.ai-analysis-content h6 {
+  color: #60a5fa;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.ai-analysis-content h1:first-child,
+.ai-analysis-content h2:first-child,
+.ai-analysis-content h3:first-child {
+  margin-top: 0;
+}
+
+.ai-analysis-content p {
+  color: #e2e8f0;
+  margin-bottom: 12px;
+  line-height: 1.8;
+}
+
+.ai-analysis-content strong {
+  color: #f7fafc;
+  font-weight: 600;
+}
+
+.ai-analysis-content ul,
+.ai-analysis-content ol {
+  color: #e2e8f0;
+  margin-bottom: 12px;
+  padding-left: 24px;
+}
+
+.ai-analysis-content li {
+  color: #e2e8f0;
+  margin-bottom: 6px;
+  line-height: 1.8;
+}
+
+.ai-analysis-content code {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.ai-analysis-content pre {
+  background: #1a1a1a;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 8px;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+
+.ai-analysis-content pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.ai-analysis-content blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 16px;
+  margin-left: 0;
+  margin-bottom: 12px;
+  color: #cbd5e0;
+  font-style: italic;
+}
+
+/* Custom Scrollbar for AI Analysis */
+.ai-analysis-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ai-analysis-content::-webkit-scrollbar-track {
+  background: #2d3748;
+  border-radius: 4px;
+}
+
+.ai-analysis-content::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 4px;
+}
+
+.ai-analysis-content::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+/* AI Analiz Minimize Simgesi */
+.ai-analysis-minimized-icon {
+  position: absolute;
+  bottom: 80px;
+  left: 20px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  z-index: 1000;
+  transition: all 0.3s ease;
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.ai-analysis-minimized-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.ai-analysis-minimized-icon:active {
+  transform: scale(0.95);
+}
+
+.ai-analysis-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 2px solid #1a202c;
+  line-height: 1;
+  min-width: 20px;
+  text-align: center;
+}

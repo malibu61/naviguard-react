@@ -63,10 +63,13 @@ const createHourlyPositionIcon = (hour) => {
 };
 
 // Harita tıklama olaylarını yakalayan component
-function MapClickHandler({ onMapClick }) {
+function MapClickHandler({ onMapClick, isDraggingRef }) {
   useMapEvents({
     click: (e) => {
-      onMapClick(e.latlng);
+      // Eğer marker sürükleniyorsa, yeni waypoint ekleme
+      if (!isDraggingRef.current) {
+        onMapClick(e.latlng);
+      }
     },
   });
   return null;
@@ -154,23 +157,28 @@ function MousePositionControl({ position, waypoints }) {
 }
 
 // Mouse hareketini dinleyen component
-function MouseMoveTracker({ onMouseMove }) {
+function MouseMoveTracker({ onMouseMove, isDraggingRef }) {
   useMapEvents({
     mousemove: (e) => {
-      onMouseMove(e.latlng);
+      if (!isDraggingRef.current) {
+        onMouseMove(e.latlng);
+      }
     },
     mouseout: () => {
-      onMouseMove(null);
+      if (!isDraggingRef.current) {
+        onMouseMove(null);
+      }
     }
   });
   return null;
 }
 
 const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate, onWaypointInsert, lastAddedIndex, hourlyPositions, weatherData }) => {
-  const [draggingIndex, setDraggingIndex] = useState(null);
   const [mousePosition, setMousePosition] = useState(null);
   const [showMaritimeDetails, setShowMaritimeDetails] = useState(true);
   const [showSymbolsModal, setShowSymbolsModal] = useState(false);
+  const [movingIndex, setMovingIndex] = useState(null);
+  const isDraggingRef = useRef(false); // useState yerine useRef - render'a sebep olmaması için!
   const markerRefs = useRef([]);
 
   // Polyline için koordinatları hazırla
@@ -190,31 +198,29 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
     onWaypointInsert(afterIndex + 1, midpoint);
   };
 
-  // Marker'ı taşınabilir yap
-  const handleMoveClick = (index, event) => {
-    event.stopPropagation(); // Harita tıklamasını engelle
-    setDraggingIndex(index);
-    // Popup'ı kapat
-    if (markerRefs.current[index]) {
-      markerRefs.current[index].closePopup();
-    }
-  };
-
-  // Taşımayı iptal et
-  const handleCancelMove = (index, event) => {
-    event.stopPropagation(); // Harita tıklamasını engelle
-    setDraggingIndex(null);
-    // Popup'ı kapat
-    if (markerRefs.current[index]) {
-      markerRefs.current[index].closePopup();
-    }
-  };
-
   // Marker taşındığında
   const handleDragEnd = (index, event) => {
     const newPosition = event.target.getLatLng();
     onWaypointUpdate(index, newPosition);
-    setDraggingIndex(null);
+    setMovingIndex(null);
+  };
+
+  // Taşıma modunu aç
+  const handleMoveClick = (index, event) => {
+    event.stopPropagation(); // Harita tıklamasını engelle
+    setMovingIndex(index);
+    if (markerRefs.current[index]) {
+      markerRefs.current[index].closePopup();
+    }
+  };
+
+  // Taşıma modunu iptal et
+  const handleCancelMove = (index, event) => {
+    event.stopPropagation(); // Harita tıklamasını engelle
+    setMovingIndex(null);
+    if (markerRefs.current[index]) {
+      markerRefs.current[index].closePopup();
+    }
   };
 
   // Waypoint sil
@@ -224,11 +230,6 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
     // Önce popup'ı kapat
     if (markerRefs.current[index]) {
       markerRefs.current[index].closePopup();
-    }
-    
-    // Dragging state'ini de temizle
-    if (draggingIndex === index) {
-      setDraggingIndex(null);
     }
     
     // Waypoint'i sil
@@ -471,13 +472,13 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
         )}
         
         {/* Mouse hareketi tracker */}
-        <MouseMoveTracker onMouseMove={setMousePosition} />
+        <MouseMoveTracker onMouseMove={setMousePosition} isDraggingRef={isDraggingRef} />
         
         {/* Koordinat göstergesi */}
         <MousePositionControl position={mousePosition} waypoints={waypoints} />
         
         {/* Harita tıklama handler */}
-        <MapClickHandler onMapClick={onWaypointAdd} />
+        <MapClickHandler onMapClick={onWaypointAdd} isDraggingRef={isDraggingRef} />
         
         {/* Waypoint markerları */}
         {waypoints.map((waypoint, index) => (
@@ -485,66 +486,59 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
             key={index}
             position={[waypoint.lat, waypoint.lng]}
             icon={createNumberedIcon(index + 1, index === lastAddedIndex)}
-            draggable={draggingIndex === index}
+            draggable={movingIndex === index}
             eventHandlers={{
-              dragend: (e) => handleDragEnd(index, e),
+              dragstart: () => {
+                isDraggingRef.current = true;
+              },
+              dragend: (e) => {
+                handleDragEnd(index, e);
+                setTimeout(() => {
+                  isDraggingRef.current = false;
+                }, 100);
+              },
+              click: (e) => {
+                e.originalEvent?.stopPropagation?.();
+              },
             }}
             ref={(ref) => (markerRefs.current[index] = ref)}
           >
-            <Tooltip permanent={false} direction="top" offset={[0, -40]}>
-              <div style={{ textAlign: 'center' }}>
-                <strong>Waypoint #{index + 1}</strong><br />
-                Lat: {waypoint.lat.toFixed(4)}°<br />
-                Lon: {waypoint.lng.toFixed(4)}°
-              </div>
-            </Tooltip>
-            
-            {/* Context Menu Popup */}
             <Popup className="waypoint-context-menu" closeButton={true}>
               <div className="context-menu-container">
                 <div className="context-menu-header">
                   <span className="context-menu-title">Waypoint #{index + 1}</span>
                 </div>
                 <div className="context-menu-actions">
-                  {draggingIndex === index ? (
-                    // Taşıma modundaysa "İptal Et" butonu göster
-                    <>
-                      <button
-                        className="context-menu-btn cancel-btn"
-                        onClick={(e) => handleCancelMove(index, e)}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M18 6L6 18M6 6l12 12"/>
-                        </svg>
-                        <span>Taşımayı İptal Et</span>
-                      </button>
-                      <div className="context-menu-hint active">
-                        📍 Marker'ı istediğiniz yere sürükleyin
-                      </div>
-                    </>
+                  {movingIndex === index ? (
+                    <button
+                      className="context-menu-btn cancel-btn"
+                      onClick={(e) => handleCancelMove(index, e)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                      <span>Taşımayı İptal Et</span>
+                    </button>
                   ) : (
-                    // Normal mod: Taşı ve Sil butonları
-                    <>
-                      <button
-                        className="context-menu-btn move-btn"
-                        onClick={(e) => handleMoveClick(index, e)}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
-                        </svg>
-                        <span>Taşı</span>
-                      </button>
-                      <button
-                        className="context-menu-btn delete-btn"
-                        onClick={(e) => handleDeleteClick(index, e)}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                        </svg>
-                        <span>Sil</span>
-                      </button>
-                    </>
+                    <button
+                      className="context-menu-btn move-btn"
+                      onClick={(e) => handleMoveClick(index, e)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+                      </svg>
+                      <span>Taşı</span>
+                    </button>
                   )}
+                  <button
+                    className="context-menu-btn delete-btn"
+                    onClick={(e) => handleDeleteClick(index, e)}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                    <span>Sil</span>
+                  </button>
                 </div>
               </div>
             </Popup>
@@ -587,20 +581,18 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
 
         {/* Saatlik konum marker'ları */}
         {hourlyPositions && hourlyPositions.map((pos, index) => {
-          // Bu konum için hava durumu verisini bul (time'a göre eşleştir)
-          // pos.time Türkiye saatine göre (UTC+3), backend'den gelen time UTC formatında
-          // Backend'den gelen UTC zamanını Türkiye saatine (UTC+3) çevirip karşılaştırıyoruz
-          // Örnek: Backend UTC 00:00 → Türkiye saati 03:00 ile eşleşmeli
-          const posTimeStr = dayjs(pos.time).format('YYYY-MM-DDTHH:mm'); // Türkiye saati
-          const weather = weatherData && weatherData.length > 0 
+          // Bu konum için hava + marine verisini bul (time'a göre eşleştir).
+          // Hem pos.time hem API 'time' UTC. Direkt UTC üzerinden karşılaştır, TR'ye çevirme.
+          const posTimeUtc = dayjs.utc(pos.time).format('YYYY-MM-DDTHH:mm');
+          const weather = weatherData && weatherData.length > 0
             ? weatherData.find(w => {
                 if (!w.time) return false;
-                // Backend'den gelen UTC zamanını Türkiye saatine (UTC+3) çevir
-                const weatherTimeUTC = w.time.substring(0, 16); // "2026-01-21T00:00"
-                const weatherTimeTurkey = dayjs(weatherTimeUTC).utc().add(3, 'hour').format('YYYY-MM-DDTHH:mm');
-                return weatherTimeTurkey === posTimeStr;
+                const weatherTimeUtc = w.time.substring(0, 16);
+                return weatherTimeUtc === posTimeUtc;
               })
             : null;
+
+          const timeUtcFormatted = dayjs.utc(pos.time).format('DD.MM.YYYY HH:mm');
 
           return (
             <Marker
@@ -611,7 +603,7 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
               <Tooltip permanent={false} direction="top" offset={[0, -24]}>
                 <div style={{ textAlign: 'center' }}>
                   <strong>+{pos.hour} Saat</strong><br />
-                  {dayjs(pos.time).format('DD.MM.YYYY HH:mm')}
+                  {timeUtcFormatted} <span style={{ fontSize: '10px', opacity: 0.9 }}>UTC</span>
                 </div>
               </Tooltip>
               
@@ -622,9 +614,9 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
                   </div>
                   <div className="hourly-popup-content">
                     <div className="hourly-popup-item">
-                      <span className="hourly-popup-label">Tarih & Saat:</span>
-                      <span className="hourly-popup-value">
-                        {dayjs(pos.time).format('DD.MM.YYYY HH:mm')}
+                      <span className="hourly-popup-label">Tarih & Saat (UTC):</span>
+                      <span className="hourly-popup-value" title="Tüm saatler UTC">
+                        {timeUtcFormatted}
                       </span>
                     </div>
                     <div className="hourly-popup-item">
@@ -676,25 +668,25 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
                             gridTemplateColumns: '1fr 1fr', 
                             gap: '10px' 
                           }}>
-                            {weather.temperature_2m !== undefined && (
+                            {weather.temperature_2m != null && (
                               <div className="hourly-popup-item">
                                 <span className="hourly-popup-label">Sıcaklık (2m):</span>
                                 <span className="hourly-popup-value" style={{ color: '#fbbf24' }}>
-                                  {weather.temperature_2m.toFixed(1)}°C
+                                  {Number(weather.temperature_2m).toFixed(1)}°C
                                 </span>
                               </div>
                             )}
                             
-                            {weather.windspeed_10m !== undefined && (
+                            {weather.windspeed_10m != null && (
                               <div className="hourly-popup-item">
                                 <span className="hourly-popup-label">Rüzgar Hızı (10m):</span>
                                 <span className="hourly-popup-value" style={{ color: '#34d399' }}>
-                                  {weather.windspeed_10m.toFixed(1)} m/s
+                                  {Number(weather.windspeed_10m).toFixed(1)} m/s
                                 </span>
                               </div>
                             )}
                             
-                            {weather.winddirection_10m !== undefined && (
+                            {weather.winddirection_10m != null && (
                               <div className="hourly-popup-item">
                                 <span className="hourly-popup-label">Rüzgar Yönü:</span>
                                 <span className="hourly-popup-value" style={{ color: '#34d399' }}>
@@ -703,16 +695,16 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
                               </div>
                             )}
                             
-                            {weather.visibility !== undefined && (
+                            {weather.visibility != null && (
                               <div className="hourly-popup-item">
                                 <span className="hourly-popup-label">Görüş Mesafesi:</span>
                                 <span className="hourly-popup-value" style={{ color: '#93c5fd' }}>
-                                  {weather.visibility.toFixed(1)} km
+                                  {Number(weather.visibility).toFixed(1)} km
                                 </span>
                               </div>
                             )}
                             
-                            {weather.cloudcover !== undefined && (
+                            {weather.cloudcover != null && (
                               <div className="hourly-popup-item">
                                 <span className="hourly-popup-label">Bulut Örtüsü:</span>
                                 <span className="hourly-popup-value" style={{ color: '#a78bfa' }}>
@@ -721,11 +713,35 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
                               </div>
                             )}
                             
-                            {weather.surface_Pressure !== undefined && (
+                            {(weather.surface_pressure != null || weather.surface_Pressure != null) && (
                               <div className="hourly-popup-item">
                                 <span className="hourly-popup-label">Yüzey Basıncı:</span>
                                 <span className="hourly-popup-value" style={{ color: '#fb7185' }}>
-                                  {weather.surface_Pressure.toFixed(1)} hPa
+                                  {(Number(weather.surface_pressure ?? weather.surface_Pressure)).toFixed(1)} hPa
+                                </span>
+                              </div>
+                            )}
+                            {(weather.waveHeight != null || weather.wave_height != null) && (
+                              <div className="hourly-popup-item">
+                                <span className="hourly-popup-label">Dalga Yüksekliği:</span>
+                                <span className="hourly-popup-value" style={{ color: '#22d3ee' }}>
+                                  {Number(weather.waveHeight ?? weather.wave_height).toFixed(2)} m
+                                </span>
+                              </div>
+                            )}
+                            {(weather.wavePeriod != null || weather.wave_period != null) && (
+                              <div className="hourly-popup-item">
+                                <span className="hourly-popup-label">Dalga Periyodu:</span>
+                                <span className="hourly-popup-value" style={{ color: '#22d3ee' }}>
+                                  {Number(weather.wavePeriod ?? weather.wave_period).toFixed(1)} s
+                                </span>
+                              </div>
+                            )}
+                            {(weather.waveDirection != null || weather.wave_direction != null) && (
+                              <div className="hourly-popup-item">
+                                <span className="hourly-popup-label">Dalga Yönü:</span>
+                                <span className="hourly-popup-value" style={{ color: '#22d3ee' }}>
+                                  {weather.waveDirection ?? weather.wave_direction}°
                                 </span>
                               </div>
                             )}
