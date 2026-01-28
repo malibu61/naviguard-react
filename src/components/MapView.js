@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, Tooltip, Popup
 import L from 'leaflet';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { Button, Popover, Modal, Typography, Tag } from 'antd';
+import { Button, Popover, Modal, Typography, Tag, message } from 'antd';
 import { MapPin, Info, BookOpen } from 'lucide-react';
 import { maritimeSymbols, ialaSystem } from '../data/maritimeSymbols';
 import MaritimeSymbolIcon from './MaritimeSymbolIcon';
@@ -63,11 +63,13 @@ const createHourlyPositionIcon = (hour) => {
 };
 
 // Harita tıklama olaylarını yakalayan component
-function MapClickHandler({ onMapClick, isDraggingRef }) {
+function MapClickHandler({ onMapClick, isDraggingRef, lastDragAtRef, movingIndex }) {
   useMapEvents({
     click: (e) => {
       // Eğer marker sürükleniyorsa, yeni waypoint ekleme
-      if (!isDraggingRef.current) {
+      const now = Date.now();
+      const justDragged = now - (lastDragAtRef.current || 0) < 300;
+      if (!isDraggingRef.current && !justDragged && movingIndex === null) {
         onMapClick(e.latlng);
       }
     },
@@ -179,7 +181,12 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
   const [showSymbolsModal, setShowSymbolsModal] = useState(false);
   const [movingIndex, setMovingIndex] = useState(null);
   const isDraggingRef = useRef(false); // useState yerine useRef - render'a sebep olmaması için!
+  const lastDragAtRef = useRef(0);
   const markerRefs = useRef([]);
+
+  useEffect(() => {
+    console.log('[movingIndex]', movingIndex);
+  }, [movingIndex]);
 
   // Polyline için koordinatları hazırla
   const routePositions = waypoints.map(wp => [wp.lat, wp.lng]);
@@ -200,18 +207,37 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
 
   // Marker taşındığında
   const handleDragEnd = (index, event) => {
-    const newPosition = event.target.getLatLng();
-    onWaypointUpdate(index, newPosition);
-    setMovingIndex(null);
+    console.log('[dragend]', { index, movingIndex });
+    // Sadece taşıma modundaki marker'ı güncelle
+    if (movingIndex === index) {
+      const newPosition = event.target.getLatLng();
+      console.log('[dragend] newPosition', newPosition);
+      onWaypointUpdate(index, newPosition);
+      setMovingIndex(null);
+    }
   };
 
   // Taşıma modunu aç
   const handleMoveClick = (index, event) => {
     event.stopPropagation(); // Harita tıklamasını engelle
+    console.log('[move click]', index);
     setMovingIndex(index);
-    if (markerRefs.current[index]) {
-      markerRefs.current[index].closePopup();
+    const marker = markerRefs.current[index];
+    if (marker) {
+      marker.closePopup();
     }
+    // İlk drag için marker üzerinde programatik mousedown tetikle
+    requestAnimationFrame(() => {
+      const el = marker?.getElement?.();
+      if (el) {
+        const evt = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+        el.dispatchEvent(evt);
+      }
+    });
+    // Kullanıcıya bilgi ver
+    setTimeout(() => {
+      message.info(`Waypoint #${index + 1} artık taşınabilir - marker'ı sürükleyin`);
+    }, 100);
   };
 
   // Taşıma modunu iptal et
@@ -478,7 +504,12 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
         <MousePositionControl position={mousePosition} waypoints={waypoints} />
         
         {/* Harita tıklama handler */}
-        <MapClickHandler onMapClick={onWaypointAdd} isDraggingRef={isDraggingRef} />
+        <MapClickHandler
+          onMapClick={onWaypointAdd}
+          isDraggingRef={isDraggingRef}
+          lastDragAtRef={lastDragAtRef}
+          movingIndex={movingIndex}
+        />
         
         {/* Waypoint markerları */}
         {waypoints.map((waypoint, index) => (
@@ -486,19 +517,23 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
             key={index}
             position={[waypoint.lat, waypoint.lng]}
             icon={createNumberedIcon(index + 1, index === lastAddedIndex)}
-            draggable={movingIndex === index}
+            draggable={true}
             eventHandlers={{
               dragstart: () => {
                 isDraggingRef.current = true;
+                lastDragAtRef.current = Date.now();
+                console.log('[dragstart]', { index, movingIndex });
               },
               dragend: (e) => {
                 handleDragEnd(index, e);
+                lastDragAtRef.current = Date.now();
                 setTimeout(() => {
                   isDraggingRef.current = false;
                 }, 100);
               },
               click: (e) => {
                 e.originalEvent?.stopPropagation?.();
+                console.log('[marker click]', { index });
               },
             }}
             ref={(ref) => (markerRefs.current[index] = ref)}
