@@ -16,6 +16,7 @@ const Sidebar = ({
   onSegmentSpeedChange,
   totalDistance,
   estimatedTime,
+  segmentDetails,
   onAnalyze,
   onWaypointRemove,
   onClearAll,
@@ -124,6 +125,42 @@ const Sidebar = ({
         useDefaultSpeed={useDefaultSpeed}
         onUseDefaultSpeedChange={onUseDefaultSpeedChange}
       />
+
+      {/* Segment Detayları */}
+      {segmentDetails && segmentDetails.length > 0 && (
+        <>
+          <Divider className="sidebar-divider" />
+          <div className="segment-section">
+            <div className="waypoint-header">
+              <Activity size={18} />
+              <Text className="waypoint-title">Segment Detayları</Text>
+            </div>
+            <div className="segment-list">
+              {segmentDetails.map(segment => (
+                <div key={segment.index} className="segment-item">
+                  <Tag color="blue" className="segment-tag">
+                    #{segment.index + 1} → #{segment.index + 2}
+                  </Tag>
+                  <div className="segment-content">
+                    <Text className="segment-distance">
+                      Mesafe: {segment.distance.toFixed(2)} NM
+                    </Text>
+                    <Text className="segment-speed">
+                      Hız: {Number(segment.speed).toFixed(1)} kn
+                    </Text>
+                    <Text className="segment-heading">
+                      Pruva: {segment.heading.toFixed(0)}°
+                    </Text>
+                    <Text className={`segment-time ${segment.time ? '' : 'muted'}`}>
+                      Süre: {segment.time ? segment.time.toFixed(2) : '-'} saat
+                    </Text>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <Divider className="sidebar-divider" />
 

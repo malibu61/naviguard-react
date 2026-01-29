@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { ConfigProvider, theme, message, Modal, Typography, Button } from 'antd';
 import { Bot, Minimize2, Maximize2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -37,6 +37,19 @@ function App() {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
     return distance;
+  }, []);
+
+  // Başlangıç yönü (heading / pruva) hesaplama
+  const calculateHeading = useCallback((lat1, lon1, lat2, lon2) => {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const toDeg = (rad) => (rad * 180) / Math.PI;
+    const dLon = toRad(lon2 - lon1);
+    const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+    const x =
+      Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+      Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+    const bearing = (toDeg(Math.atan2(y, x)) + 360) % 360;
+    return bearing;
   }, []);
 
   // Toplam mesafeyi hesapla
@@ -233,6 +246,29 @@ function App() {
   // Tahmini süre hesaplama (saat cinsinden)
   const estimatedTime = calculateTotalTime(waypoints, segmentSpeeds, useDefaultSpeed, defaultSpeed);
 
+  // Segment detayları (her waypoint -> bir sonraki)
+  const segmentDetails = useMemo(() => {
+    if (waypoints.length < 2) return [];
+    return waypoints.slice(0, -1).map((wp, index) => {
+      const next = waypoints[index + 1];
+      const distance = calculateDistance(wp.lat, wp.lng, next.lat, next.lng);
+      const heading = calculateHeading(wp.lat, wp.lng, next.lat, next.lng);
+      const speed = useDefaultSpeed
+        ? defaultSpeed
+        : (segmentSpeeds[index] !== undefined ? segmentSpeeds[index] : DEFAULT_SPEED);
+      const time = speed > 0 ? distance / speed : null;
+      return {
+        index,
+        from: wp,
+        to: next,
+        distance,
+        heading,
+        speed,
+        time
+      };
+    });
+  }, [waypoints, segmentSpeeds, useDefaultSpeed, defaultSpeed, calculateDistance, calculateHeading]);
+
   // Her 1 saat için rotadaki konumu hesapla (segment bazlı hızlara göre)
   const calculateHourlyPositions = useCallback(() => {
     if (!startTime || waypoints.length < 2) {
@@ -371,36 +407,121 @@ function App() {
     calculateHourlyPositions();
 
     // Backend'e gönderilecek data
-    // Eğer varsayılan sürat kullanılıyorsa, tüm segmentler için varsayılan sürat değerini gönder
-    // Değilse, her segment için kendi sürat değerini gönder (undefined ise null)
-    let cleanedSegmentSpeeds;
-    if (useDefaultSpeed) {
-      // Tüm segmentler için varsayılan sürat değerini kullan
-      cleanedSegmentSpeeds = Array(waypoints.length - 1).fill(defaultSpeed);
-    } else {
-      // Her segment için kendi sürat değerini kullan
-      cleanedSegmentSpeeds = segmentSpeeds.map(speed => 
-        speed !== undefined ? speed : null
-      );
+    // Segment hızları - her zaman dolu gönder (undefined/null için varsayılan hız kullan)
+    const cleanedSegmentSpeeds = Array(waypoints.length - 1).fill(null).map((_, index) => {
+      if (useDefaultSpeed) {
+        return defaultSpeed;
+      } else {
+        return segmentSpeeds[index] !== undefined && segmentSpeeds[index] !== null 
+          ? segmentSpeeds[index] 
+          : DEFAULT_SPEED;
+      }
+    });
+
+    // hourlyPositions'ı direkt hesapla (state'e güvenmek yerine)
+    let calculatedHourlyPositions = [];
+    if (startTime && waypoints.length >= 2) {
+      let accumulatedDistance = 0;
+      let accumulatedTime = 0;
+      
+      // Segment bilgilerini hesapla
+      const segments = [];
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        const dist = calculateDistance(
+          waypoints[i].lat,
+          waypoints[i].lng,
+          waypoints[i + 1].lat,
+          waypoints[i + 1].lng
+        );
+        const speed = cleanedSegmentSpeeds[i];
+        const time = speed > 0 ? dist / speed : 0;
+        
+        segments.push({
+          from: waypoints[i],
+          to: waypoints[i + 1],
+          distance: dist,
+          speed: speed,
+          time: time,
+          accumulatedDistance: accumulatedDistance,
+          accumulatedTime: accumulatedTime
+        });
+        
+        accumulatedDistance += dist;
+        accumulatedTime += time;
+      }
+
+      // Her saat için konum hesapla
+      const maxHours = Math.ceil(accumulatedTime) + 1;
+      
+      for (let hour = 1; hour <= maxHours; hour++) {
+        const timeAtHour = hour;
+        
+        if (timeAtHour >= accumulatedTime) {
+          const timeAtPosition = new Date(startTime);
+          timeAtPosition.setHours(timeAtPosition.getHours() + hour);
+
+          calculatedHourlyPositions.push({
+            hour: hour,
+            time: timeAtPosition,
+            lat: waypoints[waypoints.length - 1].lat,
+            lng: waypoints[waypoints.length - 1].lng,
+            distance: accumulatedDistance
+          });
+          break;
+        }
+
+        // Hangi segmentte olduğunu bul
+        for (let seg of segments) {
+          if (timeAtHour >= seg.accumulatedTime && 
+              timeAtHour < seg.accumulatedTime + seg.time) {
+            const timeInSegment = timeAtHour - seg.accumulatedTime;
+            const distanceInSegment = timeInSegment * seg.speed;
+            const ratio = seg.distance > 0 ? distanceInSegment / seg.distance : 0;
+
+            const lat = seg.from.lat + (seg.to.lat - seg.from.lat) * ratio;
+            const lng = seg.from.lng + (seg.to.lng - seg.from.lng) * ratio;
+
+            const timeAtPosition = new Date(startTime);
+            timeAtPosition.setHours(timeAtPosition.getHours() + hour);
+
+            calculatedHourlyPositions.push({
+              hour: hour,
+              time: timeAtPosition,
+              lat: lat,
+              lng: lng,
+              distance: seg.accumulatedDistance + distanceInSegment
+            });
+            break;
+          }
+        }
+      }
     }
 
     // hourlyPositions'ı backend formatına dönüştür
-    const formattedHourlyPositions = startTime && hourlyPositions && hourlyPositions.length > 0
-      ? hourlyPositions.map(pos => {
-          // Timestamp'i ISO 8601 formatına çevir (UTC)
-          const timestamp = pos.time instanceof Date
-            ? pos.time.toISOString()
-            : (typeof pos.time === 'string' ? pos.time : new Date(pos.time).toISOString());
+    const formattedHourlyPositions = calculatedHourlyPositions.map(pos => {
+      const timestamp = pos.time instanceof Date
+        ? pos.time.toISOString()
+        : (typeof pos.time === 'string' ? pos.time : new Date(pos.time).toISOString());
 
-          return {
-            latitude: pos.lat,
-            longitude: pos.lng,
-            timestamp: timestamp,
-            hour: pos.hour,
-            distance: pos.distance
-          };
-        })
-      : [];
+      return {
+        latitude: pos.lat,
+        longitude: pos.lng,
+        timestamp: timestamp,
+        hour: pos.hour,
+        distance: pos.distance
+      };
+    });
+
+    // Segments array'i oluştur
+    const segments = segmentDetails.map((segment, idx) => ({
+      segmentNumber: idx + 1,
+      fromWaypoint: idx + 1,
+      toWaypoint: idx + 2,
+      distance: segment.distance,
+      speed: segment.speed,
+      heading: Math.round(segment.heading), // Tam sayıya yuvarla
+      duration: segment.time || 0
+    }));
 
     const routeData = {
       waypoints: waypoints.map(wp => ({
@@ -410,6 +531,7 @@ function App() {
       segmentSpeeds: cleanedSegmentSpeeds,
       totalDistance: totalDistance,
       estimatedTime: estimatedTime,
+      segments: segments,
       hourlyPositions: formattedHourlyPositions
     };
 
@@ -513,7 +635,7 @@ function App() {
         duration: 5,
       });
     }
-  }, [waypoints, segmentSpeeds, totalDistance, estimatedTime, hourlyPositions, useDefaultSpeed, defaultSpeed, isAnalyzing]);
+  }, [waypoints, segmentSpeeds, totalDistance, estimatedTime, hourlyPositions, useDefaultSpeed, defaultSpeed, isAnalyzing, segmentDetails, calculateHourlyPositions, startTime, calculateDistance, DEFAULT_SPEED]);
 
   return (
     <ConfigProvider
@@ -533,6 +655,7 @@ function App() {
           onSegmentSpeedChange={handleSegmentSpeedChange}
           totalDistance={totalDistance}
           estimatedTime={estimatedTime}
+          segmentDetails={segmentDetails}
           onAnalyze={handleAnalyze}
           onWaypointRemove={handleWaypointRemove}
           onClearAll={handleClearAll}

@@ -280,6 +280,57 @@
   font-family: 'Courier New', monospace;
 }
 
+/* Segment Details Section */
+.segment-section {
+  margin-bottom: 16px;
+}
+
+.segment-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.segment-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(45, 55, 72, 0.3);
+  border-radius: 6px;
+  border: 1px solid #4a5568;
+  transition: all 0.2s ease;
+}
+
+.segment-item:hover {
+  background: rgba(45, 55, 72, 0.5);
+  border-color: #60a5fa;
+}
+
+.segment-tag {
+  flex-shrink: 0;
+  margin: 0 !important;
+}
+
+.segment-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.segment-distance,
+.segment-speed,
+.segment-time,
+.segment-heading {
+  color: #cbd5e0;
+  font-size: 12px;
+}
+
+.segment-time.muted {
+  color: #718096;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar {
