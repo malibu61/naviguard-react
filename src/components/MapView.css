@@ -295,6 +295,104 @@
   justify-content: center;
 }
 
+/* Navtex noktası marker (kırmızı daire + ID etiketi) */
+.navtex-point-icon {
+  background: transparent;
+  border: none;
+}
+
+.navtex-point-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.navtex-point-pin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #dc2626;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(220, 38, 38, 0.5);
+  flex-shrink: 0;
+}
+
+.navtex-point-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #1a202c;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Navtex noktası popup - koyu arka plan, yazılar beyaz, ilan numarası mavi */
+.leaflet-popup.navtex-point-popup .leaflet-popup-content-wrapper {
+  min-width: 280px;
+  max-width: 360px;
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+}
+
+.leaflet-popup.navtex-point-popup .leaflet-popup-tip {
+  background: #1e293b;
+}
+
+.navtex-popup-container {
+  padding: 4px;
+  color: #e2e8f0;
+}
+
+.navtex-popup-header {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #475569;
+}
+
+.navtex-popup-id {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #60a5fa;
+  margin-bottom: 4px;
+}
+
+.navtex-popup-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  line-height: 1.35;
+}
+
+.navtex-popup-content {
+  font-size: 12px;
+  color: #e2e8f0;
+  line-height: 1.45;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 10px;
+}
+
+.navtex-popup-link {
+  font-size: 12px;
+  color: #60a5fa;
+  font-weight: 500;
+}
+
+.navtex-popup-link:hover {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+
 /* Hourly Position Popup Styling */
 .leaflet-popup.hourly-position-popup .leaflet-popup-content-wrapper {
   width: 500px;

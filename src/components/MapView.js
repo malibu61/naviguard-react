@@ -62,6 +62,23 @@ const createHourlyPositionIcon = (hour) => {
   });
 };
 
+// Navtex noktası marker icon (turuncu daire + Navtex ID etiketi)
+const createNavtexPointIcon = (navtexId) => {
+  const label = (navtexId || '').replace(/[<>"&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c] || c));
+  return L.divIcon({
+    className: 'navtex-point-icon',
+    html: `
+      <div class="navtex-point-wrap">
+        <div class="navtex-point-pin"></div>
+        <span class="navtex-point-label">${label || '—'}</span>
+      </div>
+    `,
+    iconSize: [56, 32],
+    iconAnchor: [28, 8],
+    popupAnchor: [0, -8]
+  });
+};
+
 // Harita tıklama olaylarını yakalayan component
 function MapClickHandler({ onMapClick, isDraggingRef, lastDragAtRef, movingIndex }) {
   useMapEvents({
@@ -175,7 +192,7 @@ function MouseMoveTracker({ onMouseMove, isDraggingRef }) {
   return null;
 }
 
-const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate, onWaypointInsert, lastAddedIndex, hourlyPositions, weatherData }) => {
+const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate, onWaypointInsert, lastAddedIndex, hourlyPositions, weatherData, navtexMapPoints = [] }) => {
   const [mousePosition, setMousePosition] = useState(null);
   const [showMaritimeDetails, setShowMaritimeDetails] = useState(true);
   const [showSymbolsModal, setShowSymbolsModal] = useState(false);
@@ -790,6 +807,42 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
             </Marker>
           );
         })}
+
+        {/* Navtex noktaları (seçilen duyuruların koordinatları) */}
+        {navtexMapPoints.map((pt, index) => (
+          <Marker
+            key={`navtex-${index}`}
+            position={[pt.lat, pt.lng]}
+            icon={createNavtexPointIcon(pt.navtexId)}
+          >
+            <Tooltip permanent={false} direction="top" offset={[0, -32]}>
+              <strong>{pt.navtexId ?? 'Navtex'}</strong>
+            </Tooltip>
+            <Popup className="navtex-point-popup" closeButton={true}>
+              <div className="navtex-popup-container">
+                <div className="navtex-popup-header">
+                  <span className="navtex-popup-id">{pt.navtexId ?? '—'}</span>
+                  {pt.navtexTitle && (
+                    <div className="navtex-popup-title">{pt.navtexTitle}</div>
+                  )}
+                </div>
+                {pt.navtexContent && (
+                  <div className="navtex-popup-content">{pt.navtexContent}</div>
+                )}
+                {pt.navtexDetailUrl && (
+                  <a
+                    href={pt.navtexDetailUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="navtex-popup-link"
+                  >
+                    Detay sayfasına git →
+                  </a>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
     </div>
   );

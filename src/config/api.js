@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
   ANALYZE_ROUTE: '/api/AiAssistant/analyze-route',
   WATERZONE_DETECT: '/api/waterzone/detect',
   WEATHER_COORDINATES: '/api/weather/coordinates/combined',
+  NAVTEX: '/api/Navtex',
 };
 
 // Helper function to get full API URL

@@ -21,6 +21,7 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isMinimized, setIsMinimized] = useState(false); // Modal minimize durumu
   const [isAnalyzing, setIsAnalyzing] = useState(false); // Analiz yapılıyor mu?
+  const [navtexMapPoints, setNavtexMapPoints] = useState([]); // Navtex duyurusuna tıklanınca haritada gösterilecek noktalar
   const DEFAULT_SPEED = 12; // Varsayılan hız: 12 knots
   const [defaultSpeed, setDefaultSpeed] = useState(DEFAULT_SPEED); // Varsayılan sürat değeri
   const [useDefaultSpeed, setUseDefaultSpeed] = useState(false); // Varsayılan sürat kullanılsın mı?
@@ -218,6 +219,11 @@ function App() {
   // Varsayılan sürat kullanımı değişimi
   const handleUseDefaultSpeedChange = useCallback((checked) => {
     setUseDefaultSpeed(checked);
+  }, []);
+
+  // Navtex seçimine göre haritada gösterilecek noktalar (Sidebar seçilen duyuruların noktalarını gönderir)
+  const handleNavtexSelectionChange = useCallback((points) => {
+    setNavtexMapPoints(points);
   }, []);
 
   // Toplam süre hesaplama (segment bazlı hızlara göre)
@@ -667,6 +673,7 @@ function App() {
           useDefaultSpeed={useDefaultSpeed}
           onUseDefaultSpeedChange={handleUseDefaultSpeedChange}
           isAnalyzing={isAnalyzing}
+          onNavtexSelectionChange={handleNavtexSelectionChange}
         />
         <div className="map-wrapper">
           <MapView
@@ -678,6 +685,7 @@ function App() {
             lastAddedIndex={lastAddedIndex}
             hourlyPositions={hourlyPositions}
             weatherData={weatherData}
+            navtexMapPoints={navtexMapPoints}
           />
           
           {/* Minimize Edilmiş AI Analiz Simgesi */}
