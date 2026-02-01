@@ -858,16 +858,13 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
           );
         })}
 
-        {/* Navtex noktaları (seçilen duyuruların koordinatları) */}
+        {/* Navtex noktaları (seçilen duyuruların koordinatları) — sadece tıklanınca popup, hover'da tooltip yok */}
         {navtexMapPoints.map((pt, index) => (
           <Marker
             key={`navtex-${index}`}
             position={[pt.lat, pt.lng]}
             icon={createNavtexPointIcon(pt.navtexId)}
           >
-            <Tooltip permanent={false} direction="top" offset={[0, -32]}>
-              <strong>{pt.navtexId ?? 'Navtex'}</strong>
-            </Tooltip>
             <Popup className="navtex-point-popup" closeButton={true}>
               <div className="navtex-popup-container">
                 <div className="navtex-popup-header">

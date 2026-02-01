@@ -21,11 +21,106 @@ body {
   overflow: hidden;
 }
 
+/* Sidebar wrapper - açılıp kapanabilir */
+.sidebar-wrapper {
+  position: relative;
+  width: 380px;
+  flex-shrink: 0;
+  height: 100vh;
+  transition: width 0.3s ease, min-width 0.3s ease;
+  overflow: visible;
+}
+
+.sidebar-wrapper.closed {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Sidebar fixed olduğu için kapalıyken sola kaydır (gizle) */
+.sidebar-wrapper.closed .sidebar {
+  transform: translateX(-100%);
+}
+
+/* Sidebar sağ kenarındaki kapat butonu - scrollbar (8px) üzerine gelmemesi için sağda boşluk */
+.sidebar-toggle.sidebar-toggle-inside {
+  position: absolute;
+  top: 50%;
+  right: -24px; /* scrollbar (~8px) + boşluk, buton scrollbar ile çakışmasın */
+  transform: translateY(-50%);
+  z-index: 1001;
+  width: 24px;
+  height: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 0 8px 8px 0;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-wrapper.closed .sidebar-toggle-inside {
+  display: none;
+}
+
+.sidebar-toggle.sidebar-toggle-inside:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+/* Kenardaki aç butonu - sidebar kapalıyken görünür */
+.sidebar-toggle.sidebar-toggle-edge {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1001;
+  width: 24px;
+  height: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 0 8px 8px 0;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-toggle.sidebar-toggle-edge.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar-toggle.sidebar-toggle-edge:hover {
+  background: #3b82f6;
+  color: white;
+}
+
 .map-wrapper {
   flex: 1;
-  margin-left: 380px;
   height: 100vh;
   position: relative;
+  transition: margin-left 0.3s ease;
+  min-width: 0;
+}
+
+.map-wrapper.sidebar-open {
+  margin-left: 0;
+}
+
+.map-wrapper.sidebar-closed {
+  margin-left: 0;
 }
 
 .map-container {

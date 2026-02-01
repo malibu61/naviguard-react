@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { ConfigProvider, theme, message, Modal, Typography, Button } from 'antd';
-import { Bot, Minimize2, Maximize2 } from 'lucide-react';
+import { Bot, Minimize2, Maximize2, PanelLeftClose, PanelLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
@@ -22,6 +22,7 @@ function App() {
   const [isMinimized, setIsMinimized] = useState(false); // Modal minimize durumu
   const [isAnalyzing, setIsAnalyzing] = useState(false); // Analiz yapılıyor mu?
   const [navtexMapPoints, setNavtexMapPoints] = useState([]); // Navtex duyurusuna tıklanınca haritada gösterilecek noktalar
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Sol sidebar açık/kapalı
   const DEFAULT_SPEED = 12; // Varsayılan hız: 12 knots
   const [defaultSpeed, setDefaultSpeed] = useState(DEFAULT_SPEED); // Varsayılan sürat değeri
   const [useDefaultSpeed, setUseDefaultSpeed] = useState(false); // Varsayılan sürat kullanılsın mı?
@@ -321,7 +322,17 @@ function App() {
       accumulatedTime += time;
     }
 
-    // Her saat için konum hesapla
+    // 0. saat: Başlangıç konumu (ilk waypoint) — hourly position olarak post edilecek
+    const timeAtStart = new Date(startTime);
+    positions.push({
+      hour: 0,
+      time: timeAtStart,
+      lat: waypoints[0].lat,
+      lng: waypoints[0].lng,
+      distance: 0
+    });
+
+    // Her saat için konum hesapla (1. saatten itibaren)
     const maxHours = Math.ceil(accumulatedTime) + 1;
     
     for (let hour = 1; hour <= maxHours; hour++) {
@@ -505,19 +516,19 @@ function App() {
       
       // Saatlik konumları backend'e gönder
       console.log('startTime:', startTime);
-      console.log('hourlyPositions:', hourlyPositions);
-      console.log('hourlyPositions length:', hourlyPositions?.length);
+      console.log('calculatedHourlyPositions (0. saat dahil):', calculatedHourlyPositions);
       
+      // Hava durumu isteği: calculatedHourlyPositions kullan (0. saat dahil — başlangıç konumu için de hava alınacak)
       if (!startTime) {
         console.warn('Başlangıç saati belirlenmediği için saatlik konumlar gönderilemiyor');
         message.warning('Başlangıç saati belirlenmediği için hava durumu verileri alınamadı');
-      } else if (hourlyPositions && hourlyPositions.length > 0) {
-        const coordinatesData = hourlyPositions.map(pos => {
+      } else if (calculatedHourlyPositions && calculatedHourlyPositions.length > 0) {
+        const coordinatesData = calculatedHourlyPositions.map(pos => {
           if (!pos.time) {
             console.warn('Time property bulunamadı:', pos);
             return null;
           }
-          // Timestamp her zaman UTC (ISO 8601). TR'ye çevirme.
+          // Timestamp her zaman UTC (ISO 8601).
           const timestamp = pos.time instanceof Date
             ? pos.time.toISOString()
             : (typeof pos.time === 'string' ? pos.time : new Date(pos.time).toISOString());
@@ -529,7 +540,7 @@ function App() {
           };
         }).filter(item => item !== null);
 
-        console.log('Saatlik konumlar backend\'e gönderiliyor:', coordinatesData);
+        console.log('Saatlik konumlar (0. saat dahil) hava API\'ye gönderiliyor:', coordinatesData);
 
         try {
           const weatherResponse = await fetch(getApiUrl(API_ENDPOINTS.WEATHER_COORDINATES), {
@@ -583,27 +594,47 @@ function App() {
       }}
     >
       <div className="app-container">
-        <Sidebar
-          waypoints={waypoints}
-          segmentSpeeds={segmentSpeeds}
-          onSegmentSpeedChange={handleSegmentSpeedChange}
-          totalDistance={totalDistance}
-          estimatedTime={estimatedTime}
-          segmentDetails={segmentDetails}
-          onAnalyze={handleAnalyze}
-          onWaypointRemove={handleWaypointRemove}
-          onClearAll={handleClearAll}
-          startTime={startTime}
-          onStartTimeChange={handleStartTimeChange}
-          hourlyPositions={hourlyPositions}
-          defaultSpeed={defaultSpeed}
-          onDefaultSpeedChange={handleDefaultSpeedChange}
-          useDefaultSpeed={useDefaultSpeed}
-          onUseDefaultSpeedChange={handleUseDefaultSpeedChange}
-          isAnalyzing={isAnalyzing}
-          onNavtexSelectionChange={handleNavtexSelectionChange}
-        />
-        <div className="map-wrapper">
+        <div className={`sidebar-wrapper ${sidebarOpen ? 'open' : 'closed'}`}>
+          <Sidebar
+            waypoints={waypoints}
+            segmentSpeeds={segmentSpeeds}
+            onSegmentSpeedChange={handleSegmentSpeedChange}
+            totalDistance={totalDistance}
+            estimatedTime={estimatedTime}
+            segmentDetails={segmentDetails}
+            onAnalyze={handleAnalyze}
+            onWaypointRemove={handleWaypointRemove}
+            onClearAll={handleClearAll}
+            startTime={startTime}
+            onStartTimeChange={handleStartTimeChange}
+            hourlyPositions={hourlyPositions}
+            defaultSpeed={defaultSpeed}
+            onDefaultSpeedChange={handleDefaultSpeedChange}
+            useDefaultSpeed={useDefaultSpeed}
+            onUseDefaultSpeedChange={handleUseDefaultSpeedChange}
+            isAnalyzing={isAnalyzing}
+            onNavtexSelectionChange={handleNavtexSelectionChange}
+          />
+          <button
+            type="button"
+            className="sidebar-toggle sidebar-toggle-inside"
+            onClick={() => setSidebarOpen(false)}
+            title="Paneli kapat"
+            aria-label="Paneli kapat"
+          >
+            <PanelLeftClose size={20} />
+          </button>
+        </div>
+        <button
+          type="button"
+          className={`sidebar-toggle sidebar-toggle-edge ${!sidebarOpen ? 'visible' : ''}`}
+          onClick={() => setSidebarOpen(true)}
+          title="Paneli aç"
+          aria-label="Paneli aç"
+        >
+          <PanelLeft size={20} />
+        </button>
+        <div className={`map-wrapper ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
           <MapView
             waypoints={waypoints}
             onWaypointAdd={handleWaypointAdd}
