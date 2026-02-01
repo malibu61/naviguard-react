@@ -279,7 +279,7 @@ function App() {
   const calculateHourlyPositions = useCallback(() => {
     if (!startTime || waypoints.length < 2) {
       setHourlyPositions([]);
-      return;
+      return []; // BOŞ array return et
     }
 
     // Tüm segmentlerin hızlarını kontrol et
@@ -378,6 +378,7 @@ function App() {
     }
 
     setHourlyPositions(positions);
+    return positions; // Hesaplanan positions'ı return et!
   }, [startTime, waypoints, segmentSpeeds, totalDistance, calculateDistance, useDefaultSpeed, defaultSpeed]);
 
   // Waypoints değiştiğinde toplam mesafeyi güncelle
@@ -410,7 +411,8 @@ function App() {
 
     // ✅ Saatlik konumları SADECE analiz sırasında hesapla!
     console.log('📊 Analiz başlıyor - saatlik konumlar hesaplanıyor...');
-    calculateHourlyPositions();
+    const calculatedPositions = calculateHourlyPositions(); // Return edilen değeri al!
+    console.log('📊 Hesaplanan saatlik konumlar:', calculatedPositions);
 
     // Backend'e gönderilecek data
     // Segment hızları - her zaman dolu gönder (undefined/null için varsayılan hız kullan)
@@ -424,84 +426,10 @@ function App() {
       }
     });
 
-    // hourlyPositions'ı direkt hesapla (state'e güvenmek yerine)
-    let calculatedHourlyPositions = [];
-    if (startTime && waypoints.length >= 2) {
-      let accumulatedDistance = 0;
-      let accumulatedTime = 0;
-      
-      // Segment bilgilerini hesapla
-      const segments = [];
-      for (let i = 0; i < waypoints.length - 1; i++) {
-        const dist = calculateDistance(
-          waypoints[i].lat,
-          waypoints[i].lng,
-          waypoints[i + 1].lat,
-          waypoints[i + 1].lng
-        );
-        const speed = cleanedSegmentSpeeds[i];
-        const time = speed > 0 ? dist / speed : 0;
-        
-        segments.push({
-          from: waypoints[i],
-          to: waypoints[i + 1],
-          distance: dist,
-          speed: speed,
-          time: time,
-          accumulatedDistance: accumulatedDistance,
-          accumulatedTime: accumulatedTime
-        });
-        
-        accumulatedDistance += dist;
-        accumulatedTime += time;
-      }
-
-      // Her saat için konum hesapla
-      const maxHours = Math.ceil(accumulatedTime) + 1;
-      
-      for (let hour = 1; hour <= maxHours; hour++) {
-        const timeAtHour = hour;
-        
-        if (timeAtHour >= accumulatedTime) {
-          const timeAtPosition = new Date(startTime);
-          timeAtPosition.setHours(timeAtPosition.getHours() + hour);
-
-          calculatedHourlyPositions.push({
-            hour: hour,
-            time: timeAtPosition,
-            lat: waypoints[waypoints.length - 1].lat,
-            lng: waypoints[waypoints.length - 1].lng,
-            distance: accumulatedDistance
-          });
-          break;
-        }
-
-        // Hangi segmentte olduğunu bul
-        for (let seg of segments) {
-          if (timeAtHour >= seg.accumulatedTime && 
-              timeAtHour < seg.accumulatedTime + seg.time) {
-            const timeInSegment = timeAtHour - seg.accumulatedTime;
-            const distanceInSegment = timeInSegment * seg.speed;
-            const ratio = seg.distance > 0 ? distanceInSegment / seg.distance : 0;
-
-            const lat = seg.from.lat + (seg.to.lat - seg.from.lat) * ratio;
-            const lng = seg.from.lng + (seg.to.lng - seg.from.lng) * ratio;
-
-            const timeAtPosition = new Date(startTime);
-            timeAtPosition.setHours(timeAtPosition.getHours() + hour);
-
-            calculatedHourlyPositions.push({
-              hour: hour,
-              time: timeAtPosition,
-              lat: lat,
-              lng: lng,
-              distance: seg.accumulatedDistance + distanceInSegment
-            });
-            break;
-          }
-        }
-      }
-    }
+    // hourlyPositions'ı kullan (zaten calculateHourlyPositions'dan döndü)
+    const calculatedHourlyPositions = calculatedPositions || [];
+    
+    console.log('📊 Backend\'e gönderilecek hourlyPositions:', calculatedHourlyPositions);
 
     // hourlyPositions'ı backend formatına dönüştür
     const formattedHourlyPositions = calculatedHourlyPositions.map(pos => {

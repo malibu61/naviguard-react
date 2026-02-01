@@ -185,8 +185,23 @@ const Sidebar = ({
               <DatePicker
                 showTime
                 format="DD.MM.YYYY HH:mm"
-                value={startTime ? dayjs(startTime) : null}
-                onChange={(date) => onStartTimeChange(date ? date.toDate() : null)}
+                value={startTime ? dayjs.utc(startTime) : null}
+                onChange={(date) => {
+                  if (date) {
+                    // Kullanıcının seçtiği değerleri al (local olarak yorumlanmış ama biz UTC istiyoruz)
+                    const year = date.year();
+                    const month = date.month();
+                    const day = date.date();
+                    const hour = date.hour();
+                    const minute = date.minute();
+                    
+                    // Bu değerlerle direkt UTC Date oluştur (timezone shift olmadan)
+                    const utcDate = new Date(Date.UTC(year, month, day, hour, minute));
+                    onStartTimeChange(utcDate);
+                  } else {
+                    onStartTimeChange(null);
+                  }
+                }}
                 placeholder="Başlangıç saatini seçin (UTC)"
                 className="time-input"
                 style={{ width: '100%' }}

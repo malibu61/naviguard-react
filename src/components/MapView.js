@@ -108,6 +108,19 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return distance;
 };
 
+// Kerteriz (heading/bearing) hesaplama fonksiyonu
+const calculateHeading = (lat1, lon1, lat2, lon2) => {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const toDeg = (rad) => (rad * 180) / Math.PI;
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x =
+    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  const bearing = (toDeg(Math.atan2(y, x)) + 360) % 360;
+  return bearing;
+};
+
 // Mouse koordinatlarını gösteren kontrol
 function MousePositionControl({ position, waypoints }) {
   const map = useMap();
@@ -148,13 +161,17 @@ function MousePositionControl({ position, waypoints }) {
         const distanceFromLastWP = lastWaypoint 
           ? calculateDistance(lastWaypoint.lat, lastWaypoint.lng, position.lat, position.lng)
           : null;
+        const headingFromLastWP = lastWaypoint
+          ? calculateHeading(lastWaypoint.lat, lastWaypoint.lng, position.lat, position.lng)
+          : null;
 
         let distanceHtml = '';
-        if (distanceFromLastWP !== null) {
+        if (distanceFromLastWP !== null && headingFromLastWP !== null) {
           distanceHtml = `
             <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.2);">
-              <div style="font-weight: 600; margin-bottom: 4px; color: #e2e8f0;">Son WP'den Mesafe</div>
+              <div style="font-weight: 600; margin-bottom: 4px; color: #e2e8f0;">Son WP'den</div>
               <div style="color: #3b82f6;">${distanceFromLastWP.toFixed(2)} NM</div>
+              <div style="color: #10b981; margin-top: 2px;">Kerteriz: ${headingFromLastWP.toFixed(0)}°</div>
             </div>
           `;
         }
@@ -635,11 +652,27 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
         {hourlyPositions && hourlyPositions.map((pos, index) => {
           // Bu konum için hava + marine verisini bul (time'a göre eşleştir).
           // Hem pos.time hem API 'time' UTC. Direkt UTC üzerinden karşılaştır, TR'ye çevirme.
+          
+          // pos.time -> Date object veya ISO string
+          // Backend time -> 'YYYY-MM-DDTHH:mm' formatı (saniye yok)
           const posTimeUtc = dayjs.utc(pos.time).format('YYYY-MM-DDTHH:mm');
+          
           const weather = weatherData && weatherData.length > 0
             ? weatherData.find(w => {
                 if (!w.time) return false;
-                const weatherTimeUtc = w.time.substring(0, 16);
+                // Backend'den gelen time zaten 'YYYY-MM-DDTHH:mm' formatında
+                const weatherTimeUtc = w.time;
+                
+                // Debug için - sadece ilk marker
+                if (index === 0) {
+                  console.log('🔍 Weather matching debug (index 0):');
+                  console.log('  pos.time:', pos.time);
+                  console.log('  posTimeUtc:', posTimeUtc);
+                  console.log('  weatherTimeUtc:', weatherTimeUtc);
+                  console.log('  Match:', weatherTimeUtc === posTimeUtc);
+                  console.log('  All weatherData times:', weatherData.map(w => w.time));
+                }
+                
                 return weatherTimeUtc === posTimeUtc;
               })
             : null;
@@ -689,6 +722,23 @@ const MapView = ({ waypoints, onWaypointAdd, onWaypointRemove, onWaypointUpdate,
                         <span className="hourly-popup-value">
                           {pos.distance.toFixed(2)} NM
                         </span>
+                      </div>
+                    )}
+                    
+                    {/* Debug: Weather matching info */}
+                    {!weather && (
+                      <div style={{ 
+                        marginTop: '16px', 
+                        padding: '12px',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        color: '#fca5a5'
+                      }}>
+                        <div>⚠️ Hava durumu verisi bulunamadı</div>
+                        <div style={{ marginTop: '4px', fontSize: '11px', opacity: 0.8 }}>
+                          Aranan: {posTimeUtc}
+                        </div>
                       </div>
                     )}
                     
